@@ -51,6 +51,27 @@ function unisalud_consulta_enqueue_scripts()
             'nonce'      => wp_create_nonce('unisalud_consulta_nonce'),
             'plugin_url' => $base_url,
         ]);
+        //consulta de afiliados
+        wp_enqueue_style(
+            'usuarios-salud-consulta-afiliado-css',
+            $base_url . 'public/css/style-consulta-afiliado.css',
+            [],
+            $version
+        );
+        wp_enqueue_script(
+            'usuarios-salud-consulta-afiliado-js',
+            $base_url . 'public/js/script-consulta-afiliado.js',
+            ['jquery'],
+            $version,
+            true
+        );
+        wp_localize_script('usuarios-salud-consulta-afiliado-js', 'usuarios_consulta_afiliado_ajax', [
+            'ajax_url'   => admin_url('admin-ajax.php'),
+            'nonce'      => wp_create_nonce('usuarios_salud_nonce'),
+            'redirect'   => get_permalink(),
+        ]);
+        //consulta de afiliados
+        
     } else {
         wp_enqueue_style(
             'usuarios-salud-otp-css',
@@ -69,7 +90,7 @@ function unisalud_consulta_enqueue_scripts()
             'ajax_url'   => admin_url('admin-ajax.php'),
             'nonce'      => wp_create_nonce('unisalud_consulta_nonce'),
             'redirect'   => get_permalink(),
-        ]);
+        ]);        
     }
 }
 add_action('wp_enqueue_scripts', 'unisalud_consulta_enqueue_scripts');
@@ -98,9 +119,10 @@ function unisalud_consulta_shortcode()
 
     if ($sesion['valid']) {
         $usuario_salud = $sesion['usuario'];
-        $template = __DIR__ . '/template-lista.php';
+        //$template = __DIR__ . '/template-lista.php';        
+        $template = __DIR__ . '/template-consulta-afiliado.php';
     } else {
-        $template = __DIR__ . '/template-otp.php';
+        $template = __DIR__ . '/template-otp.php';        
     }
 
     if (file_exists($template)) {

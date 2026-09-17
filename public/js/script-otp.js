@@ -4,7 +4,7 @@ jQuery(document).ready(function ($) {
     var NONCE = cfg.nonce;
     var REDIRECT = cfg.redirect;
 
-    var OTP_DURATION = 2 * 60; // 2 minutos en segundos
+    var OTP_DURATION = 1 * 15; // 2 minutos en segundos
 
     var $step1 = $('#otp-step1');
     var $step2 = $('#otp-step2');
@@ -15,15 +15,15 @@ jQuery(document).ready(function ($) {
     var $btnBuscarText = $('#otp-btn-buscar-text');
     var $btnBuscarSpinner = $('#otp-btn-buscar-spinner');
     var $codigoInput = $('#otp-codigo');
+    var $digitInputs = $('.otp-digit-input');
+    var $inputsContainer = $('#otp-inputs-container');
     var $codigoError = $('#otp-codigo-error');
     var $btnVerificar = $('#otp-btn-verificar');
     var $btnVerificarText = $('#otp-btn-verificar-text');
     var $btnVerificarSpinner = $('#otp-btn-verificar-spinner');
     var $reenviar = $('#otp-reenviar');
-    var $success = $('#otp-success');
-    var $timer = $('#otp-timer');
-    var $timerVal = $('#otp-timer-value');
-    var $timerExp = $('#otp-timer-expirado');
+    var $success = $('#otp-success');    
+    var $timerVal = $('#otp-timer-value');    
     var $correoDestino = $('#otp-correo-destino');
 
     var currentEmail = '';
@@ -74,10 +74,9 @@ jQuery(document).ready(function ($) {
             timerInterval = null;
         }
         tiempoRestante = OTP_DURATION;
-        otpExpirado = false;
-        $timer.removeClass('hidden warning expired');
-        $timerVal.removeClass('warning expired').text(formatearTiempo(tiempoRestante));
-        $timerExp.addClass('hidden');
+        otpExpirado = false;        
+        $timerVal.removeClass('warning expired').text(formatearTiempo(tiempoRestante));        
+        $timerVal.prop('disabled', false);
         $btnVerificar.prop('disabled', false);
 
         timerInterval = setInterval(function () {
@@ -85,18 +84,16 @@ jQuery(document).ready(function ($) {
             if (tiempoRestante <= 0) {
                 clearInterval(timerInterval);
                 timerInterval = null;
-                $timerVal.text('0:00').addClass('expired');
-                $timer.addClass('expired');
-                $timerExp.removeClass('hidden');
+                $timerVal.text('0:00').addClass('expired');                                
                 otpExpirado = true;
                 $btnVerificar.prop('disabled', true);
-                mostrarError($codigoInput, $codigoError, '⏰ El código ha expirado. Solicita uno nuevo.');
+                $reenviar.removeClass('disabled');
+                //mostrarError($codigoInput, $codigoError, '⏰ El código ha expirado. Solicita uno nuevo.');
                 return;
             }
             $timerVal.text(formatearTiempo(tiempoRestante));
             if (tiempoRestante <= 60) {
-                $timerVal.addClass('warning');
-                $timer.addClass('warning');
+                $timerVal.addClass('warning');                
             } else {
                 $timerVal.removeClass('warning');
                 $timer.removeClass('warning');
@@ -108,8 +105,7 @@ jQuery(document).ready(function ($) {
         if (timerInterval) {
             clearInterval(timerInterval);
             timerInterval = null;
-        }
-        $timer.addClass('hidden');
+        }        
     }
 
     // --------------------------------------------------
@@ -166,7 +162,7 @@ jQuery(document).ready(function ($) {
                 $mensaje.addClass('show');
                 $step1.addClass('hidden');
                 $step2.removeClass('hidden');
-                $codigoInput.trigger('focus');
+                $digitInputs.eq(0).trigger('focus');
                 iniciarTemporizador();
                 toggleSpinner($btnBuscar, $btnBuscarText, $btnBuscarSpinner, false);
             }, function (err) {
@@ -196,14 +192,16 @@ jQuery(document).ready(function ($) {
         }
 
         limpiarErrores();
-        var codigo = $.trim($codigoInput.val());
+        var codigo = obtenerCodigoOTP();   // 👈 antes era $codigoInput.val()
 
         if (!codigo) {
             mostrarError($codigoInput, $codigoError, '⚠️ Por favor ingresa el código OTP');
+            marcarErrorInputsOTP();
             return;
         }
         if (!/^\d{6}$/.test(codigo)) {
             mostrarError($codigoInput, $codigoError, '⚠️ El código debe tener 6 dígitos numéricos');
+            marcarErrorInputsOTP();
             return;
         }
 
@@ -212,8 +210,8 @@ jQuery(document).ready(function ($) {
         peticion('salud_verificar_otp', { email: currentEmail, otp: codigo }, function (data) {
             detenerTemporizador();
             $codigoInput.val('').css('border-color', '#4caf50');
-            $step2.addClass('hidden');
-            $timer.addClass('hidden');
+            $digitInputs.val('').removeClass('filled').css('border-color', '#4caf50');
+            $step2.addClass('hidden');            
             $success.text('🎉 ¡Verificación exitosa! Bienvenido ' + data.nombre).addClass('show');
             toggleSpinner($btnVerificar, $btnVerificarText, $btnVerificarSpinner, false);
 
@@ -222,6 +220,7 @@ jQuery(document).ready(function ($) {
             }, 1500);
         }, function (err) {
             mostrarError($codigoInput, $codigoError, err.message);
+            marcarErrorInputsOTP();
             $codigoInput.val('').trigger('focus');
             toggleSpinner($btnVerificar, $btnVerificarText, $btnVerificarSpinner, false);
         });
@@ -249,7 +248,7 @@ jQuery(document).ready(function ($) {
             $reenviar.text('✅ Reenviado');
             iniciarTemporizador();
             limpiarErrores();
-            $codigoInput.val('').trigger('focus');
+            limpiarInputsOTP();
             $btnVerificar.prop('disabled', false);
             setTimeout(function () {
                 $reenviar.text(original).css('cursor', 'pointer');
@@ -260,6 +259,125 @@ jQuery(document).ready(function ($) {
         });
     });
 
+
+
+
+
+
+
+    // --------------------------------------------------
+    // Helpers para los 6 inputs OTP
+    // --------------------------------------------------
+    function obtenerCodigoOTP() {
+        var codigo = '';
+        $digitInputs.each(function () {
+            codigo += $(this).val();
+        });
+        return codigo;
+    }
+
+    function setCodigoOTP(codigo) {
+        codigo = (codigo || '').replace(/\D/g, '').slice(0, 6);
+        $digitInputs.each(function (i) {
+            $(this).val(codigo[i] || '');
+            $(this).toggleClass('filled', !!codigo[i]);
+        });
+        $('#otp-codigo').val(codigo);
+    }
+
+    function limpiarInputsOTP() {
+        $digitInputs.val('').removeClass('filled error');
+        $('#otp-codigo').val('');
+        $digitInputs.eq(0).trigger('focus');
+    }
+
+    function marcarErrorInputsOTP() {
+        $digitInputs.addClass('error');
+        setTimeout(function () {
+            $digitInputs.removeClass('error');
+        }, 1500);
+    }
+
+    // --------------------------------------------------
+    // Manejo de los 6 inputs individuales
+    // --------------------------------------------------
+    $digitInputs.on('input', function (e) {
+        var $this = $(this);
+        var val = $this.val();
+
+        // Solo permitir dígitos
+        val = val.replace(/\D/g, '');
+
+        // Si pegaron varios dígitos en un input, distribuirlos
+        if (val.length > 1) {
+            var index = parseInt($this.data('index'), 10);
+            var chars = val.split('');
+            for (var i = 0; i < chars.length && (index + i) < 6; i++) {
+                $digitInputs.eq(index + i).val(chars[i]).addClass('filled');
+            }
+            var next = Math.min(index + chars.length, 5);
+            $digitInputs.eq(next).trigger('focus');
+        } else {
+            $this.val(val);
+            $this.toggleClass('filled', !!val);
+            // Auto-avanzar al siguiente
+            if (val && $this.data('index') < 5) {
+                $digitInputs.eq($this.data('index') + 1).trigger('focus');
+            }
+        }
+
+        $('#otp-codigo').val(obtenerCodigoOTP());
+        $codigoError.removeClass('show');
+        $digitInputs.removeClass('error');
+    });
+
+    $digitInputs.on('keydown', function (e) {
+        var $this = $(this);
+        var index = parseInt($this.data('index'), 10);
+
+        // Retroceso: si está vacío, ir al anterior
+        if (e.key === 'Backspace' && !$this.val() && index > 0) {
+            e.preventDefault();
+            $digitInputs.eq(index - 1).val('').removeClass('filled').trigger('focus');
+            $('#otp-codigo').val(obtenerCodigoOTP());
+        }
+
+        // Flechas de navegación
+        if (e.key === 'ArrowLeft' && index > 0) {
+            e.preventDefault();
+            $digitInputs.eq(index - 1).trigger('focus');
+        }
+        if (e.key === 'ArrowRight' && index < 5) {
+            e.preventDefault();
+            $digitInputs.eq(index + 1).trigger('focus');
+        }
+
+        // Enter → verificar
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            $btnVerificar.trigger('click');
+        }
+    });
+
+    // Pegar código completo
+    $digitInputs.on('paste', function (e) {
+        e.preventDefault();
+        var paste = (e.originalEvent.clipboardData || window.clipboardData).getData('text');
+        paste = (paste || '').replace(/\D/g, '').slice(0, 6);
+        if (paste) {
+            setCodigoOTP(paste);
+            var next = Math.min(paste.length, 5);
+            $digitInputs.eq(next).trigger('focus');
+            $('#otp-codigo').val(paste);
+        }
+    });
+
+    // Foco al primer input al mostrarse el paso 2
+    $digitInputs.eq(0).on('focus', function () {
+        $(this).select();
+    });
+
+
     // Foco inicial
-    $correoInput.trigger('focus');
+    //$correoInput.trigger('focus');
 });
