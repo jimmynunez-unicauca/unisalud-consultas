@@ -1,4 +1,115 @@
 jQuery(document).ready(function ($) {
+    var cfg = window.usuarios_otp_ajax || {};
+    var API = cfg.ajax_url;
+    var NONCE = cfg.nonce;
+    var REDIRECT = cfg.redirect;
+    //inicio tiempo
+    // ============================================
+    // CONTADOR DE SESIÓN (viene desde PHP)
+    // ============================================
+    (function initSessionTimer() {
+        var segundosRestantes = (typeof SEGUNDOS_RESTANTES !== 'undefined')
+            ? parseInt(SEGUNDOS_RESTANTES, 10)
+            : 0;
+
+        var timerClock = document.getElementById('timerClock');
+        var sessionTimer = document.getElementById('session-timer');
+
+        if (!timerClock || !sessionTimer) return;
+
+        if (segundosRestantes <= 0) {
+            // Ya expiró al cargar → recargar para que PHP redirija
+            window.location.reload();
+            return;
+        }
+
+        function formatearTiempo(seg) {
+            var h = Math.floor(seg / 3600);
+            var m = Math.floor((seg % 3600) / 60);
+            var s = seg % 60;
+            return String(h).padStart(2, '0') + ':' +
+                String(m).padStart(2, '0') + ':' +
+                String(s).padStart(2, '0');
+        }
+
+        function actualizarContador() {
+            timerClock.textContent = formatearTiempo(segundosRestantes);
+
+            if (segundosRestantes <= 300) {
+                sessionTimer.classList.add('warning');
+            } else {
+                sessionTimer.classList.remove('warning');
+            }
+
+            if (segundosRestantes <= 0) {
+                clearInterval(intervalo);
+                timerClock.textContent = '00:00:00';
+
+                // 🔑 Cerrar sesión en servidor y recargar
+                jQuery.post(usuarios_ajax.ajax_url, {
+                    action: 'salud_cerrar_sesion',
+                    nonce: usuarios_ajax.nonce
+                }).always(function () {
+                    window.location.reload();
+                });
+                return;
+            }
+
+            segundosRestantes--;
+        }
+
+        actualizarContador();
+        var intervalo = setInterval(actualizarContador, 1000);
+    })();
+    //fin tiempo
+
+    
+    //inicio AJAX    
+    function peticion(action, data, onSuccess, onError) {       
+        console.log("usuarios_ajax.ajax_url: ",usuarios_ajax.ajax_url)      
+        $.ajax({
+            url: usuarios_ajax.ajax_url,
+            type: 'POST',            
+            data: {
+                action: action,
+                nonce: NONCE,
+                identificacion: data.identificacion
+            },
+            success: function (resp) {
+                if (resp && resp.success) {
+                    onSuccess && onSuccess(resp.data);
+                } else {
+                    var msg = resp && resp.data && resp.data.message ? resp.data.message : 'Error inesperado';
+                    onError && onError({ message: msg });
+                }
+            },
+            error: function (xhr) {
+                var msg = 'Error de conexión';
+                if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                    msg = xhr.responseJSON.data.message;
+                }
+                onError && onError({ message: msg });
+            }
+        });
+    }
+    //fin AJAX
+
+    //inicio buscar identificacion
+    var $campoIdentificacion = $('#campo-identificacion');
+    var $btnConsultaAfiliado = $('#btn-consulta-afiliado');
+    $btnConsultaAfiliado.on('click', function () {
+        var identificacion = $.trim($campoIdentificacion.val());        
+        console.log("identificacion: ",identificacion)
+        peticion('buscar_identificacion_afiliado', { identificacion: identificacion }, function (data) {
+            console.log("data jssss: ",data);
+        });        
+
+            
+    });
+    //fin buscar identificacion
+
+
+
     var filtroNombre = $('#filtro-nombre');
     var filtroEstado = $('#filtro-estado');
     var btnLimpiar = $('#btn-limpiar');
@@ -36,8 +147,7 @@ jQuery(document).ready(function ($) {
         var nombre = filtroNombre.val();
         var estado = filtroEstado.val();
 
-        usuariosLista.html('<div class="loading">Cargando personas...</div>');
-
+        usuariosLista.html('<div class="loading">Cargando personas...</div>');              
         $.ajax({
             url: usuarios_ajax.ajax_url,
             type: 'POST',
@@ -444,4 +554,6 @@ jQuery(document).ready(function ($) {
     ).fail(function () {
         cargarUsuarios();
     });
+
+
 });

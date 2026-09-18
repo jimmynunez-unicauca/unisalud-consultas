@@ -8,7 +8,7 @@ require_once __DIR__ . '/Mailer.php';
 
 class UsuariosSaludOTP
 {
-    const DURACION_MINUTOS = 2;
+    const DURACION_MINUTOS = 0.5;//30s
 
     /**
      * Busca usuario activo con rol Prestador en PostgreSQL
@@ -148,7 +148,8 @@ class UsuariosSaludOTP
         }
 
         $otp    = str_pad((string)random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-        $expira = date('Y-m-d H:i:s', strtotime('+' . self::DURACION_MINUTOS . ' minutes'));
+        $segundos = (int) round(self::DURACION_MINUTOS * 60);
+        $expira   = date('Y-m-d H:i:s', time() + $segundos);
         $id     = (int)$user['id'];
 
         $stmt = $db->prepare(
@@ -193,6 +194,7 @@ class UsuariosSaludOTP
             'email'      => $user['correo'],
             'nombre'     => $user['nombre_completo'],
             'expires_at' => $expira,
+            'duracion'   => self::DURACION_MINUTOS,
         ];
     }
 
@@ -288,7 +290,8 @@ class UsuariosSaludOTP
         }
 
         $otp    = str_pad((string)random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-        $expira = date('Y-m-d H:i:s', strtotime('+' . self::DURACION_MINUTOS . ' minutes'));
+        $segundos = (int) round(self::DURACION_MINUTOS * 60);
+        $expira   = date('Y-m-d H:i:s', time() + $segundos);
         $id     = (int)$user['id'];
 
         $stmt = $db->prepare(
@@ -314,6 +317,7 @@ class UsuariosSaludOTP
         return [
             'email'      => $user['email'],
             'expires_at' => $expira,
+            'duracion'   => self::DURACION_MINUTOS,
         ];
     }
 }

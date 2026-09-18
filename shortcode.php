@@ -50,6 +50,7 @@ function unisalud_consulta_enqueue_scripts()
             'ajax_url'   => admin_url('admin-ajax.php'),
             'nonce'      => wp_create_nonce('unisalud_consulta_nonce'),
             'plugin_url' => $base_url,
+            'redirect'   => get_permalink(), // 🔑 útil para recargas
         ]);
         //consulta de afiliados
         wp_enqueue_style(
@@ -119,8 +120,7 @@ function unisalud_consulta_shortcode()
 
     if ($sesion['valid']) {
         $usuario_salud = $sesion['usuario'];
-        //$template = __DIR__ . '/template-lista.php';        
-        $template = __DIR__ . '/template-consulta-afiliado.php';
+        $template = __DIR__ . '/template-lista.php';        
     } else {
         $template = __DIR__ . '/template-otp.php';        
     }

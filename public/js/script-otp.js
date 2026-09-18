@@ -2,9 +2,9 @@ jQuery(document).ready(function ($) {
     var cfg = window.usuarios_otp_ajax || {};
     var API = cfg.ajax_url;
     var NONCE = cfg.nonce;
-    var REDIRECT = cfg.redirect;
+    var REDIRECT = cfg.redirect;        
 
-    var OTP_DURATION = 1 * 15; // 2 minutos en segundos
+    var OTP_DURATION = 1 * 30; // 2 minutos en segundos
 
     var $step1 = $('#otp-step1');
     var $step2 = $('#otp-step2');
@@ -111,7 +111,7 @@ jQuery(document).ready(function ($) {
     // --------------------------------------------------
     // AJAX
     // --------------------------------------------------
-    function peticion(action, data, onSuccess, onError) {
+    function peticion(action, data, onSuccess, onError) {                
         var payload = $.extend({ action: action, nonce: NONCE }, data);
         $.ajax({
             url: API,
@@ -163,6 +163,12 @@ jQuery(document).ready(function ($) {
                 $step1.addClass('hidden');
                 $step2.removeClass('hidden');
                 $digitInputs.eq(0).trigger('focus');
+
+                // 🔑 Sincronizar duración real desde el servidor
+                /*if (data.duracion) {
+                    OTP_DURATION = parseInt(data.duracion, 10);
+                }*/
+
                 iniciarTemporizador();
                 toggleSpinner($btnBuscar, $btnBuscarText, $btnBuscarSpinner, false);
             }, function (err) {
@@ -246,6 +252,11 @@ jQuery(document).ready(function ($) {
 
         peticion('salud_reenviar_otp', { email: currentEmail }, function () {
             $reenviar.text('✅ Reenviado');
+
+            /*if (data && data.duracion) {
+                OTP_DURATION = parseInt(data.duracion, 10);
+            }*/
+
             iniciarTemporizador();
             limpiarErrores();
             limpiarInputsOTP();

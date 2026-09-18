@@ -3,7 +3,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Forzar inicio de sesión en el contexto AJAX
+if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
+    session_start();
+}
+
+require_once plugin_dir_path(__DIR__) . 'includes/Database.php';
 require_once plugin_dir_path(__DIR__) . 'includes/Auth.php';
+require_once plugin_dir_path(__DIR__) . 'includes/OTP.php';
 
 /**
  * Lista de personas filtradas. Requiere sesión activa.
@@ -86,3 +93,30 @@ function ajax_get_persona_detalle_salud()
 }
 add_action('wp_ajax_nopriv_get_persona_detalle_salud', 'ajax_get_persona_detalle_salud');
 add_action('wp_ajax_get_persona_detalle_salud',        'ajax_get_persona_detalle_salud');
+
+
+/**
+ * Buscar Identificacion OTP
+ */
+function ajax_buscar_identificacion_afiliado()
+{
+    //UsuariosSaludAuth::requerirSesionAjax();
+    var_dump("php usuarios identificacion: ".$_POST['identificacion']);
+    $identificacion = isset($_POST['identificacion'])
+    ? preg_replace('/[^0-9]/', '', wp_unslash($_POST['identificacion']))
+    : '';
+        
+    if (empty($identificacion)) {
+        wp_send_json_error(['message' => 'Identificacion no especificado']);
+    }
+
+    $resultado = UsuariosSaludAuth::buscarIdentificacionAfiliado($_POST['identificacion']);
+    var_dump("php usuarios resultado: ".$resultado);
+    if (!$resultado) {
+        wp_send_json_error(['message' => 'Usuario no encontrado']);
+    }
+
+    wp_send_json_success($resultado);
+}
+add_action('wp_ajax_nopriv_buscar_identificacion_afiliado', 'ajax_buscar_identificacion_afiliado');
+add_action('wp_ajax_buscar_identificacion_afiliado',        'ajax_buscar_identificacion_afiliado');

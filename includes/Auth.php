@@ -8,7 +8,7 @@ require_once __DIR__ . '/Database.php';
 class UsuariosSaludAuth
 {
     const SESSION_KEY       = 'unisalud_consulta_auth';
-    const DURACION_SEGUNDOS = 7200; // 2 horas
+    const DURACION_SEGUNDOS = 3600;//1h    2 horas 7200
 
     /**
      * Asegura que la sesión PHP esté iniciada
@@ -147,4 +147,79 @@ class UsuariosSaludAuth
 
         unset($_SESSION[self::SESSION_KEY]);
     }
+
+
+    /**
+     * Devuelve segundos restantes de la sesión actual
+     */
+    public static function segundosRestantes()
+    {
+        self::iniciarSesionSiNoExiste();
+
+        if (empty($_SESSION[self::SESSION_KEY]['created_at'])) {
+            return 0;
+        }
+
+        $transcurrido = time() - (int)$_SESSION[self::SESSION_KEY]['created_at'];
+        return max(0, self::DURACION_SEGUNDOS - $transcurrido);
+    }
+
+    /**
+     * Alias para leer los datos de la sesión
+     */
+    public static function datosSesion()
+    {
+        self::iniciarSesionSiNoExiste();
+        return $_SESSION[self::SESSION_KEY] ?? null;
+    }
+
+
+    public static function buscarIdentificacionAfiliado($identificacionAfiliado)
+    {
+        self::iniciarSesionSiNoExiste();
+
+        try {
+            $db = UsuariosSaludDatabase::pgsql();
+            if (!$db) {
+                return ['valid' => false, 'message' => 'Sin conexión', 'usuario' => null];
+            }
+
+            // ✅ PDO: prepare devuelve PDOStatement
+            $stmt = $db->prepare(
+                "SELECT correo, identificacion, nombre_completo
+                FROM usuarios
+                WHERE identificacion = :identificacion
+                LIMIT 1"
+            );
+
+            if (!$stmt) {
+                return ['valid' => false, 'message' => 'Error al preparar', 'usuario' => null];
+            }
+
+            $stmt->execute([':identificacion' => $identificacionAfiliado]);
+
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user) {
+                return ['valid' => false, 'message' => 'Usuario no encontrado', 'usuario' => null];
+            }
+
+            return [
+                'valid'   => true,
+                'usuario' => $user,
+                'message' => 'OK'
+            ];
+
+        } catch (Throwable $e) {
+            error_log('UsuariosSaludAuth error: ' . $e->getMessage()
+                . ' @ ' . $e->getFile() . ':' . $e->getLine());
+
+            return [
+                'valid'   => false,
+                'message' => 'Error del servidor',
+                'usuario' => null
+            ];
+        }
+    }
+
 }

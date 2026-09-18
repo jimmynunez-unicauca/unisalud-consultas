@@ -5,9 +5,59 @@ if (!defined('ABSPATH')) {
 
 $nombre_sesion = isset($usuario_salud['nombre']) ? $usuario_salud['nombre'] : '';
 $email_sesion  = isset($usuario_salud['email'])  ? $usuario_salud['email']  : '';
-?>
-<div class="usuarios-salud-container">
 
+// 🔑 Calcular segundos restantes reales desde Auth
+$segundosRestantes = UsuariosSaludAuth::segundosRestantes();
+?>
+
+<script>
+    // 🔑 Variable global que leerá script-usuarios.js
+    var SEGUNDOS_RESTANTES = <?php echo (int) $segundosRestantes; ?>;
+</script>
+
+<!-- inicio formulario consultar prestador -->
+<!-- ===== CONTADOR DE SESIÓN ===== -->
+<div id="session-timer">
+    <div class="timer-row">
+        <span class="timer-icon">⏱️</span>
+        <span class="timer-clock" id="timerClock">--:--:--</span>
+    </div>
+    <div class="timer-message">
+        La sesión se cerrará automáticamente cuando finalice el tiempo.
+    </div>
+</div>
+
+<div class="usuarios-consulta-afiliado-container">
+    <div class="consulta-afiliado-card">        
+
+        <!-- Paso 1: Buscar Identificacion -->
+        <div id="consulta-afiliado-step1" >
+            <div class="consulta-afiliado-header">
+                <h2>Consulta de Afiliados a la Unidad de Salud</h2>
+                <p>Ingresa el número de identificación correspondiente para poder hacer la consulta:</p>
+            </div>
+
+            <div class="consulta-afiliado-form-group">                
+                <input type="number" class="consulta-afiliado-identificacion-input" id="campo-identificacion" max="9999999999">
+                <div id="consulta-afiliado-correo-error" class="consulta-afiliado-error-msg">⚠️ Por favor ingresa una identificacion válido</div>
+            </div>
+            <button id="btn-consulta-afiliado" class="consulta-afiliado-btn-consultar">
+                <span id="consulta-afiliado-btn-consultar-text">CONSULTAR</span>
+                <span id="consulta-afiliado-btn-consultar-spinner" class="consulta-afiliado-spinner hidden"></span>
+            </button>
+        </div>                       
+        
+    </div>
+</div>
+
+<button id="btn-cerrar-sesion" class="consulta-afiliado-btn-salir">
+    <span id="consulta-afiliado-btn-salir-text">SALIR</span>    
+</button>
+<!-- fin formulario consultar prestador -->
+
+
+<!-- inicio tabla -->
+<div class="usuarios-salud-container" hidden>
     <!-- Barra de sesión -->
     <div class="usuarios-sesion-bar">
         <div class="usuarios-sesion-info">
@@ -62,3 +112,4 @@ $email_sesion  = isset($usuario_salud['email'])  ? $usuario_salud['email']  : ''
         </div>
     </div>
 </div>
+<!-- fin tabla -->
