@@ -211,6 +211,7 @@ jQuery(document).ready(function ($) {
 
         var html = '';
 
+        // ----- Datos personales -----
         html += seccion('📋 Datos personales', [
             ['Tipo identificación', p.tipoidentificacion],
             ['Número documento', p.numerodocumento],
@@ -228,6 +229,7 @@ jQuery(document).ready(function ($) {
             ['Orientación sexual', p.orientacionsexual]
         ]);
 
+        // ----- Contacto y ubicación -----
         html += seccion('📞 Contacto y ubicación', [
             ['Correo electrónico', p.correo],
             ['Correo alternativo', p.correo_alterno],
@@ -241,6 +243,50 @@ jQuery(document).ready(function ($) {
             ['Departamento', p.departamento]
         ]);
 
+        // ----- Información laboral -----
+        if (p.info_laboral) {
+            var il = p.info_laboral;
+            html += seccion('💼 Información laboral', [
+                ['Cargo actual', il.cargoactual],
+                ['Tipo de vinculación', il.tipovinculacion],
+                ['Dedicación', il.dedicacion],
+                ['Provisional', il.provisional],
+                ['Dependencia', il.dependencia],
+                ['Sede', il.sede],
+                ['Extensión', il.extension],
+                ['Teléfono laboral', il.telefono],
+                ['Fecha ingreso UNICAUCA', il.fechaingresounicauca],
+                ['Vencimiento contrato', il.fechavencimientocontrato],
+                ['N° radicación', il.numeroradicacion],
+                ['Resolución pensión', il.pension_resolucion],
+                ['Fecha resolución pensión', il.pension_fecha]
+            ]);
+        }
+
+        // ----- Nivel salarial -----
+        if (p.nivel_salarial) {
+            var ns = p.nivel_salarial;
+            var rangoIni = (ns.rango_inicial !== null && ns.rango_inicial !== undefined)
+                ? '$ ' + Number(ns.rango_inicial).toLocaleString('es-CO')
+                : '';
+            var rangoFin = (ns.rango_final !== null && ns.rango_final !== undefined)
+                ? '$ ' + Number(ns.rango_final).toLocaleString('es-CO')
+                : '';
+            var rango = '';
+            if (rangoIni && rangoFin) {
+                rango = rangoIni + '  –  ' + rangoFin;
+            } else if (rangoIni) {
+                rango = rangoIni;
+            }
+
+            html += seccion('💰 Nivel salarial', [
+                ['Descripción', ns.descripcion],
+                ['Nivel', ns.nivel],
+                ['Rango salarial', rango]
+            ]);
+        }
+
+        // ----- Estados -----
         if (p.estados && p.estados.length > 0) {
             html += '<div class="modal-seccion">';
             html += '<h3>📌 Estados registrados</h3>';
@@ -258,6 +304,7 @@ jQuery(document).ready(function ($) {
             html += '</tbody></table></div>';
         }
 
+        // ----- Discapacidades -----
         if (p.discapacidades && p.discapacidades.length > 0) {
             html += '<div class="modal-seccion">';
             html += '<h3>♿ Discapacidades</h3>';
@@ -274,6 +321,7 @@ jQuery(document).ready(function ($) {
             html += '</tbody></table></div>';
         }
 
+        // ----- Afiliaciones -----
         if (p.afiliaciones && p.afiliaciones.length > 0) {
             html += '<div class="modal-seccion">';
             html += '<h3>🏥 Afiliaciones</h3>';
@@ -288,6 +336,7 @@ jQuery(document).ready(function ($) {
                 html += campo('IBC acumulado', a.ibcacumulado);
                 html += campo('N° radicación', a.numeroradicacion);
                 html += campo('Observación', a.observacion);
+                html += campo('Nivel salarial', a.nivel_salarial_descripcion);
                 html += '</div>';
                 if (a.nombrecontactoemergencia || a.telefonocontactoemergencia || a.celularcontactoemergencia || a.direccioncontactoemergencia) {
                     html += '<div class="modal-subtitulo">Contacto de emergencia</div>';
@@ -303,6 +352,7 @@ jQuery(document).ready(function ($) {
             html += '</div>';
         }
 
+        // ----- Convenios -----
         if (p.convenios && p.convenios.length > 0) {
             html += '<div class="modal-seccion">';
             html += '<h3>📄 Convenios</h3>';
@@ -317,6 +367,31 @@ jQuery(document).ready(function ($) {
                     '<td>' + escapeHtml(c.fecha_fin_estado || '—') + '</td>' +
                     '</tr>';
             });
+            html += '</tbody></table></div>';
+        }
+
+        // ----- Beneficiarios -----
+        if (p.beneficiarios && p.beneficiarios.length > 0) {
+            html += '<div class="modal-seccion">';
+            html += '<h3>👨‍👩‍👧 Beneficiarios (' + p.beneficiarios.length + ')</h3>';
+            html += '<table class="modal-tabla"><thead><tr>' +
+                '<th>Nombre</th><th>Documento</th><th>Parentesco</th>' +
+                '<th>F. Nacimiento</th><th>Sexo</th><th>Sangre</th>' +
+                '<th>Radicación</th>' +
+                '</tr></thead><tbody>';
+
+            $.each(p.beneficiarios, function (i, b) {
+                html += '<tr>' +
+                    '<td>' + escapeHtml(b.nombre_completo || '—') + '</td>' +
+                    '<td>' + escapeHtml((b.tipoidentificacion || '') + ' ' + (b.numerodocumento || '')) + '</td>' +
+                    '<td>' + escapeHtml(b.parentescobeneficiario || '—') + '</td>' +
+                    '<td>' + escapeHtml(b.fecha_nacimiento_formateada || b.fechanacimiento || '—') + '</td>' +
+                    '<td>' + escapeHtml(b.sexo_texto || '—') + '</td>' +
+                    '<td>' + escapeHtml(b.tipo_sangre || '—') + '</td>' +
+                    '<td>' + escapeHtml(b.numeroradicacion || '—') + '</td>' +
+                    '</tr>';
+            });
+
             html += '</tbody></table></div>';
         }
 

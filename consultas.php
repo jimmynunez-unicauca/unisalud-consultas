@@ -208,6 +208,9 @@ if (!class_exists('UsuariosSaludConsultas')) {
                 return null;
             }
 
+            // ============================================================
+            // 1) Datos personales + ubicación + correo
+            // ============================================================
             $sql = "SELECT
                         p.id, p.numerodocumento, p.tipoidentificacion,
                         p.primernombre, p.segundonombre, p.primerapellido, p.segundoapellido,
@@ -275,6 +278,9 @@ if (!class_exists('UsuariosSaludConsultas')) {
                 $detalle[$k] = $detalle[$k] ?? '';
             }
 
+            // ============================================================
+            // 2) Estados
+            // ============================================================
             $detalle['estados'] = $this->ejecutarConsulta(
                 "SELECT pe.id, pe.fecha_inicio_estado, pe.fecha_fin,
                         pe.tipoafiliado, pe.tipo_estado,
@@ -286,6 +292,9 @@ if (!class_exists('UsuariosSaludConsultas')) {
                 [$id]
             );
 
+            // ============================================================
+            // 3) Discapacidades
+            // ============================================================
             $detalle['discapacidades'] = $this->ejecutarConsulta(
                 "SELECT pd.id, pd.fecharegistro, d.descripcion, d.grado
                  FROM personas_discapacidades pd
@@ -295,20 +304,54 @@ if (!class_exists('UsuariosSaludConsultas')) {
                 [$id]
             );
 
+            // ============================================================
+            // 4) Afiliaciones + nivel salarial + relación laboral
+            // ============================================================
             $detalle['afiliaciones'] = $this->ejecutarConsulta(
-                "SELECT a.id, a.tipoafiliacion,
-                        a.fecharadicacion, a.fechaingresosgsss, a.fechafinalizacion,
-                        a.ibcacumulado, a.observacion, a.numeroradicacion,
-                        a.nombrecontactoemergencia,
-                        a.telefonocontactoemergencia,
-                        a.celularcontactoemergencia,
-                        a.direccioncontactoemergencia
+                "SELECT
+                    a.id, a.tipoafiliacion,
+                    a.fecharadicacion, a.fechaingresosgsss, a.fechafinalizacion,
+                    a.ibcacumulado, a.observacion, a.numeroradicacion,
+                    a.nombrecontactoemergencia,
+                    a.telefonocontactoemergencia,
+                    a.celularcontactoemergencia,
+                    a.direccioncontactoemergencia,
+                    -- Nivel salarial
+                    ns.id              AS nivel_salarial_id,
+                    ns.descripcion     AS nivel_salarial_descripcion,
+                    ns.nivel           AS nivel_salarial_nivel,
+                    ns.rango_inicial   AS nivel_salarial_rango_inicial,
+                    ns.rango_final     AS nivel_salarial_rango_final,
+                    -- Relación laboral
+                    rl.id              AS rl_id,
+                    rl.cargoactual,
+                    rl.dedicacion,
+                    rl.extension,
+                    rl.telefono        AS rl_telefono,
+                    rl.fechaingresounicauca,
+                    rl.fechavencimientocontrato,
+                    rl.numeroradicacion AS rl_numeroradicacion,
+                    rl.provisional,
+                    rl.tipovinculacion,
+                    -- Dependencia / Sede / Pensión
+                    dep.descripcion    AS dependencia,
+                    sed.descripcion    AS sede,
+                    pen.numeroresolucion AS pension_resolucion,
+                    pen.fecharesolucion  AS pension_fecha
                  FROM afiliaciones a
+                 LEFT JOIN niveles_salariales  ns  ON ns.id  = a.id_nivel_salarial
+                 LEFT JOIN relaciones_laborales rl ON rl.id  = a.id_relacion_laboral
+                 LEFT JOIN dependencias         dep ON dep.id = rl.id_dependencia
+                 LEFT JOIN sedes                sed ON sed.id = rl.id_sede
+                 LEFT JOIN pensiones            pen ON pen.id = rl.id_pension
                  WHERE a.id_cotizante = ?
                  ORDER BY a.fecharadicacion DESC NULLS LAST, a.id DESC",
                 [$id]
             );
 
+            // ============================================================
+            // 5) Convenios
+            // ============================================================
             $detalle['convenios'] = [];
             if (!empty($detalle['numerodocumento'])) {
                 $detalle['convenios'] = $this->ejecutarConsulta(
@@ -325,6 +368,118 @@ if (!class_exists('UsuariosSaludConsultas')) {
                      ORDER BY pce.fecha_inicio_estado DESC NULLS LAST, pc.id DESC",
                     [$detalle['numerodocumento']]
                 );
+            }
+
+            // ============================================================
+            // 6) Beneficiarios
+            // ============================================================
+            $detalle['beneficiarios'] = $this->ejecutarConsulta(
+                "SELECT
+                    b.id              AS beneficiario_id,
+                    b.beneficiarioasociado,
+                    b.ubicacioncontactoigual,
+                    b.upcadicional,
+                    p.id              AS persona_id,
+                    p.numerodocumento,
+                    p.tipoidentificacion,
+                    p.primernombre,
+                    p.segundonombre,
+                    p.primerapellido,
+                    p.segundoapellido,
+                    p.fechanacimiento,
+                    p.sexo,
+                    p.tiposangre,
+                    p.tiporh,
+                    p.estadocivil,
+                    p.escolaridad,
+                    cb.parentescobeneficiario,
+                    cb.numeroradicacion,
+                    m.descripcion     AS municipio,
+                    d.descripcion     AS departamento
+                 FROM cotizantes c
+                 INNER JOIN cotizantes_beneficiarios cb ON cb.id_cotizante  = c.id
+                 INNER JOIN beneficiarios b             ON b.id             = cb.id_beneficiario
+                 INNER JOIN personas p                  ON p.id             = b.id_persona
+                 LEFT JOIN municipios    m              ON m.id             = p.id_municipio
+                 LEFT JOIN departamentos d              ON d.id             = m.id_departamento
+                 WHERE c.id_persona = ?
+                 ORDER BY cb.parentescobeneficiario, p.primerapellido, p.primernombre",
+                [$id]
+            );
+
+            foreach ($detalle['beneficiarios'] as &$b) {
+                $b['nombre_completo'] = trim(
+                    ($b['primernombre']    ?? '') . ' ' .
+                    ($b['segundonombre']   ?? '') . ' ' .
+                    ($b['primerapellido']  ?? '') . ' ' .
+                    ($b['segundoapellido'] ?? '')
+                );
+
+                if (!empty($b['fechanacimiento'])) {
+                    $ts    = strtotime($b['fechanacimiento']);
+                    $dias  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+                    $meses = ['enero','febrero','marzo','abril','mayo','junio',
+                              'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+                    $b['fecha_nacimiento_formateada'] =
+                        $dias[date('w', $ts)] . ', ' . date('d', $ts) . ' de ' .
+                        $meses[date('n', $ts) - 1] . ' de ' . date('Y', $ts);
+                } else {
+                    $b['fecha_nacimiento_formateada'] = '';
+                }
+
+                $tsB = trim(($b['tiposangre'] ?? '') . ' ' . ($b['tiporh'] ?? ''));
+                $b['tipo_sangre'] = ($tsB !== '') ? $tsB : 'No registrado';
+                $b['sexo_texto']  = !empty($b['sexo']) ? $b['sexo'] : 'No registrado';
+
+                foreach ([
+                    'parentescobeneficiario','numeroradicacion',
+                    'municipio','departamento','upcadicional'
+                ] as $k) {
+                    $b[$k] = $b[$k] ?? '';
+                }
+            }
+            unset($b);
+
+            // ============================================================
+            // 7) Información laboral más reciente (aplanada)
+            // ============================================================
+            $detalle['info_laboral'] = null;
+            foreach ($detalle['afiliaciones'] as $af) {
+                if (!empty($af['rl_id'])) {
+                    $detalle['info_laboral'] = [
+                        'cargoactual'             => $af['cargoactual'],
+                        'dedicacion'              => $af['dedicacion'],
+                        'extension'               => $af['extension'],
+                        'telefono'                => $af['rl_telefono'],
+                        'fechaingresounicauca'    => $af['fechaingresounicauca'],
+                        'fechavencimientocontrato'=> $af['fechavencimientocontrato'],
+                        'numeroradicacion'        => $af['rl_numeroradicacion'],
+                        'provisional'             => $af['provisional'],
+                        'tipovinculacion'         => $af['tipovinculacion'],
+                        'dependencia'             => $af['dependencia'],
+                        'sede'                    => $af['sede'],
+                        'pension_resolucion'      => $af['pension_resolucion'],
+                        'pension_fecha'           => $af['pension_fecha'],
+                    ];
+                    break; // el primero ya está ordenado por fecha DESC
+                }
+            }
+
+            // ============================================================
+            // 8) Nivel salarial más reciente (aplanado)
+            // ============================================================
+            $detalle['nivel_salarial'] = null;
+            foreach ($detalle['afiliaciones'] as $af) {
+                if (!empty($af['nivel_salarial_id'])) {
+                    $detalle['nivel_salarial'] = [
+                        'id'            => $af['nivel_salarial_id'],
+                        'descripcion'   => $af['nivel_salarial_descripcion'],
+                        'nivel'         => $af['nivel_salarial_nivel'],
+                        'rango_inicial' => $af['nivel_salarial_rango_inicial'],
+                        'rango_final'   => $af['nivel_salarial_rango_final'],
+                    ];
+                    break;
+                }
             }
 
             return $detalle;
