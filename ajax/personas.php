@@ -86,3 +86,64 @@ function ajax_get_persona_detalle_salud()
 }
 add_action('wp_ajax_nopriv_get_persona_detalle_salud', 'ajax_get_persona_detalle_salud');
 add_action('wp_ajax_get_persona_detalle_salud',        'ajax_get_persona_detalle_salud');
+
+/**
+ * Consulta una persona por número de identificación exacto.
+ * Requiere sesión activa.
+ */
+function ajax_salud_consultar_por_identificacion()
+{
+    error_log('[CONSULTA] INICIO. POST=' . print_r($_POST, true));
+    error_log('[CONSULTA] session_id=' . session_id());
+    error_log('[CONSULTA] user_id=' . get_current_user_id());
+    error_log('[CONSULTA] session_token=' . wp_get_session_token());
+
+    if (!isset($_POST['nonce'])) {
+        error_log('[CONSULTA] nonce NO ENVIADO');
+        wp_send_json_error(['message' => 'Error de seguridad', 'code' => 'BAD_NONCE'], 403);
+        return;
+    }
+
+    $nonce_recibido = sanitize_text_field(wp_unslash($_POST['nonce']));
+    $verificacion   = wp_verify_nonce($nonce_recibido, 'usuarios_salud_nonce');
+
+    error_log('[CONSULTA] nonce_recibido=' . $nonce_recibido);
+    error_log('[CONSULTA] wp_verify_nonce devuelve=' . var_export($verificacion, true));
+
+    if (!$verificacion) {
+        error_log('[CONSULTA] NONCE INVALIDO');
+        wp_send_json_error(['message' => 'Error de seguridad', 'code' => 'BAD_NONCE'], 403);
+        return;
+    }
+
+    error_log('[CONSULTA] nonce OK, continuando...');
+
+    UsuariosSaludAuth::requerirSesionAjax();
+
+    $identificacion = isset($_POST['identificacion']) ? sanitize_text_field(wp_unslash($_POST['identificacion'])) : '';
+    if ($identificacion === '') {
+        wp_send_json_error(['message' => 'Debes ingresar un número de identificación']);
+    }
+
+    $consultas_path = plugin_dir_path(__DIR__) . 'consultas.php';
+    if (!file_exists($consultas_path)) {
+        wp_send_json_error('Archivo consultas.php no encontrado');
+    }
+    require_once $consultas_path;
+
+    if (!class_exists('UsuariosSaludConsultas')) {
+        wp_send_json_error('Clase UsuariosSaludConsultas no encontrada');
+    }
+
+    $obj   = new UsuariosSaludConsultas();
+    $datos = $obj->getPersonaPorIdentificacion($identificacion);
+
+    if ($datos === null) {
+        wp_send_json_error(['message' => 'No se encontró un afiliado con ese número de identificación']);
+    }
+
+    error_log('[CONSULTA] OK, enviando respuesta');
+    wp_send_json_success($datos);
+}
+add_action('wp_ajax_nopriv_salud_consultar_por_identificacion', 'ajax_salud_consultar_por_identificacion');
+add_action('wp_ajax_salud_consultar_por_identificacion',        'ajax_salud_consultar_por_identificacion');

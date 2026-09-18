@@ -27,9 +27,14 @@ function unisalud_consulta_check_nonce()
  */
 function ajax_salud_fresh_nonce()
 {
-    wp_send_json_success([
-        'nonce' => wp_create_nonce('unisalud_consulta_nonce'),
-    ]);
+    error_log('[FRESH_NONCE] session_id=' . session_id());
+    error_log('[FRESH_NONCE] user_id=' . get_current_user_id());
+    error_log('[FRESH_NONCE] session_token=' . wp_get_session_token());
+
+    $nonce = wp_create_nonce('usuarios_salud_nonce');
+    error_log('[FRESH_NONCE] nonce creado=' . $nonce);
+
+    wp_send_json_success(['nonce' => $nonce]);
 }
 
 /**
@@ -140,14 +145,25 @@ function ajax_salud_reenviar_otp()
 }
 
 /**
- * Cerrar sesión
+ * Cerrar sesión.
+ * Sin validación de nonce a propósito: es un endpoint que destruye la propia
+ * sesión del usuario. No hay riesgo CSRF real (forzar logout no da beneficio).
  */
 function ajax_salud_cerrar_sesion()
 {
-    unisalud_consulta_check_nonce();
+    error_log('[LOGOUT] INICIO. POST=' . print_r($_POST, true));
+    error_log('[LOGOUT] session_id antes=' . session_id());
+    error_log('[LOGOUT] SESSION antes=' . print_r($_SESSION, true));
+
     UsuariosSaludAuth::cerrarSesion();
+
+    error_log('[LOGOUT] session_id despues=' . session_id());
+    error_log('[LOGOUT] SESSION despues=' . print_r($_SESSION, true));
+
     wp_send_json_success(['message' => 'Sesión cerrada']);
 }
+add_action('wp_ajax_nopriv_salud_cerrar_sesion', 'ajax_salud_cerrar_sesion');
+add_action('wp_ajax_salud_cerrar_sesion',        'ajax_salud_cerrar_sesion');
 
 /**
  * DEBUG: Ver estado de la sesión y conexiones

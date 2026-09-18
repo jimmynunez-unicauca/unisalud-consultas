@@ -18,12 +18,14 @@
     text-align: center;
     margin-bottom: 30px;
 }
+
 .usuarios-otp-container .otp-header h2 {
     color: #333;
     font-size: 26px;
     font-weight: 600;
     margin: 0 0 8px 0;
 }
+
 .usuarios-otp-container .otp-header p {
     color: #888;
     font-size: 14px;
@@ -33,6 +35,7 @@
 .usuarios-otp-container .otp-form-group {
     margin-bottom: 20px;
 }
+
 .usuarios-otp-container .otp-form-group label {
     display: block;
     margin-bottom: 8px;
@@ -40,17 +43,19 @@
     font-weight: 500;
     font-size: 14px;
 }
+
 .usuarios-otp-container .otp-form-group input {
     width: 100%;
-    padding: 14px 16px;
-    border: 2px solid #e0e0e0;
+    padding: 8px 16px;
+    border: 1px solid #DEDBDB;
     border-radius: 12px;
-    font-size: 16px;
+    font: normal normal normal 14px/24px Open Sans !important;
     transition: all 0.3s ease;
     outline: none;
     background: #f8f9fa;
     box-sizing: border-box;
 }
+
 .usuarios-otp-container .otp-form-group input:focus {
     border-color: #667eea;
     background: #fff;
@@ -58,30 +63,36 @@
 }
 
 .usuarios-otp-container .otp-btn {
-    width: 100%;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 50%;
     padding: 14px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #000066;
     color: #fff;
     border: none;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: 600;
+    border-radius: 22px;
+    font: normal normal 600 14px/17px Open Sans !important;
     cursor: pointer;
     transition: all 0.3s ease;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+
 .usuarios-otp-container .otp-btn:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
 }
+
 .usuarios-otp-container .otp-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }
+
 .usuarios-otp-container .otp-btn-secondary {
     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
+
 .usuarios-otp-container .otp-btn-secondary:hover:not(:disabled) {
     box-shadow: 0 10px 20px rgba(245, 87, 108, 0.3);
 }
@@ -94,13 +105,16 @@
     margin: 20px 0;
     display: none;
 }
+
 .usuarios-otp-container .otp-message.show {
     display: block;
 }
+
 .usuarios-otp-container .otp-message.error {
     background: #fff0f0;
     border-left-color: #f5576c;
 }
+
 .usuarios-otp-container .otp-email-highlight {
     color: #667eea;
     font-weight: 600;
@@ -112,6 +126,7 @@
     margin-top: 5px;
     display: none;
 }
+
 .usuarios-otp-container .otp-error-msg.show {
     display: block;
 }
@@ -122,11 +137,13 @@
     text-align: center;
     margin-top: 10px;
 }
+
 .usuarios-otp-container .otp-hint span {
     color: #667eea;
     cursor: pointer;
     font-weight: 600;
 }
+
 .usuarios-otp-container .otp-hint span:hover {
     text-decoration: underline;
 }
@@ -140,6 +157,7 @@
     border-radius: 8px;
     display: none;
 }
+
 .usuarios-otp-container .otp-success-msg.show {
     display: block;
 }
@@ -152,33 +170,40 @@
     border-radius: 10px;
     border: 2px solid #e0e0e0;
 }
+
 .usuarios-otp-container .otp-timer-container.warning {
     border-color: #f5576c;
     background: #fff0f0;
 }
+
 .usuarios-otp-container .otp-timer-container.expired {
     border-color: #f5576c;
     background: #ffebee;
     opacity: 0.7;
 }
+
 .usuarios-otp-container .otp-timer-label {
     font-size: 12px;
     color: #888;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
+
 .usuarios-otp-container .otp-timer-value {
     font-size: 32px;
     font-weight: bold;
     color: #333;
     font-variant-numeric: tabular-nums;
 }
+
 .usuarios-otp-container .otp-timer-value.warning {
     color: #f5576c;
 }
+
 .usuarios-otp-container .otp-timer-value.expired {
     color: #c62828;
 }
+
 .usuarios-otp-container .otp-timer-expired {
     color: #c62828;
     font-weight: bold;
@@ -196,9 +221,70 @@
     vertical-align: middle;
     margin-left: 8px;
 }
+
 @keyframes otp-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
+
 .usuarios-otp-container .hidden {
     display: none !important;
+}
+
+/* Título y subtítulo de la tarjeta OTP */
+.otp-titulo {
+    text-align: center !important;
+    font: normal normal 600 20px/26px Titillium Web !important;
+    letter-spacing: 0px !important;
+    color: #000066 !important;
+    opacity: 1 !important;
+}
+
+.otp-subtitulo {
+    text-align: center !important;
+    font: normal normal normal 14px/24px Open Sans !important;
+    letter-spacing: 0px !important;
+    color: #131B3C !important;
+    opacity: 1 !important;
+}
+
+/* Cajas del OTP (6 cuadros) */
+.otp-input-cajas {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.otp-input-cajas input {
+    width: 48px;
+    height: 56px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 600;
+    color: #1a1a3e;
+    border: 2px solid #e4e6f0;
+    border-radius: 10px;
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.otp-input-cajas input:focus {
+    border-color: #4a50a0;
+    box-shadow: 0 0 0 3px rgba(74, 80, 160, 0.08);
+    outline: none;
+}
+
+/* Link "Reenviar código" */
+.otp-reenviar-link {
+    text-align: center;
+    font-size: 13px;
+    color: #00b3e6;
+    cursor: pointer;
+    margin: 12px 0 24px;
+}
+
+.otp-reenviar-link:hover {
+    text-decoration: underline;
 }

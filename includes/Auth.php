@@ -113,14 +113,15 @@ class UsuariosSaludAuth
         $id    = $_SESSION[self::SESSION_KEY]['id']    ?? null;
         $email = $_SESSION[self::SESSION_KEY]['email'] ?? '';
 
+        // 1) Limpiar OTP en MySQL y auditar
         if ($id) {
             try {
                 $db = UsuariosSaludDatabase::mysql();
                 if ($db) {
                     $stmt = $db->prepare(
                         "UPDATE usuarios_otp
-                         SET otp_code = NULL, otp_expires_at = NULL
-                         WHERE id = ?"
+                     SET otp_code = NULL, otp_expires_at = NULL
+                     WHERE id = ?"
                     );
                     $idInt = (int)$id;
                     $stmt->bind_param('i', $idInt);
@@ -128,7 +129,6 @@ class UsuariosSaludAuth
                     $stmt->close();
                 }
 
-                // Auditar logout
                 require_once __DIR__ . '/OTP.php';
                 if (class_exists('UsuariosSaludOTP') && $email !== '') {
                     UsuariosSaludOTP::auditarPublico(
@@ -145,6 +145,27 @@ class UsuariosSaludAuth
             }
         }
 
-        unset($_SESSION[self::SESSION_KEY]);
+        // 2) Vaciar sesión en memoria
+        $_SESSION = [];
+
+        // 3) Borrar cookies de sesión
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $params["path"] ?: '/',
+                $params["domain"] ?: '',
+                $params["secure"] ?? false,
+                $params["httponly"] ?? true
+            );
+            setcookie(session_name(), '', time() - 42000, '/');
+        }
+
+        // 4) Destruir la sesión en el servidor
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_destroy();
+        }
     }
 }

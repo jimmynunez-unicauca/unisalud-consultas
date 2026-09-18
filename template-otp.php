@@ -6,19 +6,19 @@ if (!defined('ABSPATH')) {
 <div class="usuarios-otp-container">
     <div class="otp-card">
         <div class="otp-header">
-            <h2>🔐 Verificación</h2>
-            <p>Ingresa tu correo para continuar</p>
+            <h2 class="otp-titulo">Acceso para Prestador</h2>
+            <p class="otp-subtitulo">Ingresa el correo electrónico para recibir un código de verificación y continuar con el acceso.</p>
         </div>
 
         <!-- Paso 1: Correo -->
         <div id="otp-step1">
             <div class="otp-form-group">
-                <label for="otp-correo">Correo Electrónico</label>
-                <input type="email" id="otp-correo" placeholder="Ej: ejemplo@unicauca.edu.co" autocomplete="email">
+                <!-- <label for="otp-correo">Correo Electrónico</label> -->
+                <input type="email" id="otp-correo" placeholder="Ingresa el Correo electrónico" autocomplete="email">
                 <div id="otp-correo-error" class="otp-error-msg">⚠️ Por favor ingresa un correo válido</div>
             </div>
             <button id="otp-btn-buscar" class="otp-btn">
-                <span id="otp-btn-buscar-text">Buscar</span>
+                <span id="otp-btn-buscar-text">ENVIAR</span>
                 <span id="otp-btn-buscar-spinner" class="otp-spinner hidden"></span>
             </button>
         </div>

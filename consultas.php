@@ -113,10 +113,10 @@ if (!class_exists('UsuariosSaludConsultas')) {
 
             if (!empty($nombre)) {
                 $sql .= " AND (p.primernombre ILIKE ?"
-                      . " OR p.segundonombre ILIKE ?"
-                      . " OR p.primerapellido ILIKE ?"
-                      . " OR p.segundoapellido ILIKE ?"
-                      . " OR p.numerodocumento ILIKE ?)";
+                    . " OR p.segundonombre ILIKE ?"
+                    . " OR p.primerapellido ILIKE ?"
+                    . " OR p.segundoapellido ILIKE ?"
+                    . " OR p.numerodocumento ILIKE ?)";
                 $like = "%{$nombre}%";
                 for ($i = 0; $i < 5; $i++) {
                     $params[] = $like;
@@ -138,16 +138,28 @@ if (!class_exists('UsuariosSaludConsultas')) {
             foreach ($registros as &$row) {
                 $row['nombre_completo'] = trim(
                     ($row['primernombre']    ?? '') . ' ' .
-                    ($row['segundonombre']   ?? '') . ' ' .
-                    ($row['primerapellido']  ?? '') . ' ' .
-                    ($row['segundoapellido'] ?? '')
+                        ($row['segundonombre']   ?? '') . ' ' .
+                        ($row['primerapellido']  ?? '') . ' ' .
+                        ($row['segundoapellido'] ?? '')
                 );
 
                 if (!empty($row['fechanacimiento'])) {
                     $ts    = strtotime($row['fechanacimiento']);
-                    $dias  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-                    $meses = ['enero','febrero','marzo','abril','mayo','junio',
-                              'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+                    $dias  = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                    $meses = [
+                        'enero',
+                        'febrero',
+                        'marzo',
+                        'abril',
+                        'mayo',
+                        'junio',
+                        'julio',
+                        'agosto',
+                        'septiembre',
+                        'octubre',
+                        'noviembre',
+                        'diciembre'
+                    ];
                     $row['fecha_formateada'] =
                         $dias[date('w', $ts)] . ', ' .
                         date('d', $ts) . ' de ' .
@@ -164,10 +176,20 @@ if (!class_exists('UsuariosSaludConsultas')) {
                 $row['correo']         = $row['correo_principal'] ?? '';
                 $row['correo_alterno'] = $row['correo_alterno']   ?? '';
 
-                foreach ([
-                    'telefono','celular','direccion','barrio','estrato','zona',
-                    'municipio','departamento','correo','correo_alterno'
-                ] as $k) {
+                foreach (
+                    [
+                        'telefono',
+                        'celular',
+                        'direccion',
+                        'barrio',
+                        'estrato',
+                        'zona',
+                        'municipio',
+                        'departamento',
+                        'correo',
+                        'correo_alterno'
+                    ] as $k
+                ) {
                     $row[$k] = $row[$k] ?? '';
                 }
             }
@@ -182,10 +204,10 @@ if (!class_exists('UsuariosSaludConsultas')) {
 
             if (!empty($nombre)) {
                 $sql .= " AND (p.primernombre ILIKE ?"
-                      . " OR p.segundonombre ILIKE ?"
-                      . " OR p.primerapellido ILIKE ?"
-                      . " OR p.segundoapellido ILIKE ?"
-                      . " OR p.numerodocumento ILIKE ?)";
+                    . " OR p.segundonombre ILIKE ?"
+                    . " OR p.primerapellido ILIKE ?"
+                    . " OR p.segundoapellido ILIKE ?"
+                    . " OR p.numerodocumento ILIKE ?)";
                 $like = "%{$nombre}%";
                 for ($i = 0; $i < 5; $i++) {
                     $params[] = $like;
@@ -246,16 +268,28 @@ if (!class_exists('UsuariosSaludConsultas')) {
 
             $detalle['nombre_completo'] = trim(
                 ($detalle['primernombre']    ?? '') . ' ' .
-                ($detalle['segundonombre']   ?? '') . ' ' .
-                ($detalle['primerapellido']  ?? '') . ' ' .
-                ($detalle['segundoapellido'] ?? '')
+                    ($detalle['segundonombre']   ?? '') . ' ' .
+                    ($detalle['primerapellido']  ?? '') . ' ' .
+                    ($detalle['segundoapellido'] ?? '')
             );
 
             if (!empty($detalle['fechanacimiento'])) {
                 $ts    = strtotime($detalle['fechanacimiento']);
-                $dias  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-                $meses = ['enero','febrero','marzo','abril','mayo','junio',
-                          'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+                $dias  = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                $meses = [
+                    'enero',
+                    'febrero',
+                    'marzo',
+                    'abril',
+                    'mayo',
+                    'junio',
+                    'julio',
+                    'agosto',
+                    'septiembre',
+                    'octubre',
+                    'noviembre',
+                    'diciembre'
+                ];
                 $detalle['fecha_nacimiento_formateada'] =
                     $dias[date('w', $ts)] . ', ' . date('d', $ts) . ' de ' .
                     $meses[date('n', $ts) - 1] . ' de ' . date('Y', $ts);
@@ -271,10 +305,20 @@ if (!class_exists('UsuariosSaludConsultas')) {
             $detalle['correo']         = $detalle['correo_principal'] ?? '';
             $detalle['correo_alterno'] = $detalle['correo_alterno']   ?? '';
 
-            foreach ([
-                'telefono','celular','direccion','barrio','estrato','zona',
-                'municipio','departamento','correo','correo_alterno'
-            ] as $k) {
+            foreach (
+                [
+                    'telefono',
+                    'celular',
+                    'direccion',
+                    'barrio',
+                    'estrato',
+                    'zona',
+                    'municipio',
+                    'departamento',
+                    'correo',
+                    'correo_alterno'
+                ] as $k
+            ) {
                 $detalle[$k] = $detalle[$k] ?? '';
             }
 
@@ -410,16 +454,28 @@ if (!class_exists('UsuariosSaludConsultas')) {
             foreach ($detalle['beneficiarios'] as &$b) {
                 $b['nombre_completo'] = trim(
                     ($b['primernombre']    ?? '') . ' ' .
-                    ($b['segundonombre']   ?? '') . ' ' .
-                    ($b['primerapellido']  ?? '') . ' ' .
-                    ($b['segundoapellido'] ?? '')
+                        ($b['segundonombre']   ?? '') . ' ' .
+                        ($b['primerapellido']  ?? '') . ' ' .
+                        ($b['segundoapellido'] ?? '')
                 );
 
                 if (!empty($b['fechanacimiento'])) {
                     $ts    = strtotime($b['fechanacimiento']);
-                    $dias  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-                    $meses = ['enero','febrero','marzo','abril','mayo','junio',
-                              'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+                    $dias  = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                    $meses = [
+                        'enero',
+                        'febrero',
+                        'marzo',
+                        'abril',
+                        'mayo',
+                        'junio',
+                        'julio',
+                        'agosto',
+                        'septiembre',
+                        'octubre',
+                        'noviembre',
+                        'diciembre'
+                    ];
                     $b['fecha_nacimiento_formateada'] =
                         $dias[date('w', $ts)] . ', ' . date('d', $ts) . ' de ' .
                         $meses[date('n', $ts) - 1] . ' de ' . date('Y', $ts);
@@ -431,10 +487,15 @@ if (!class_exists('UsuariosSaludConsultas')) {
                 $b['tipo_sangre'] = ($tsB !== '') ? $tsB : 'No registrado';
                 $b['sexo_texto']  = !empty($b['sexo']) ? $b['sexo'] : 'No registrado';
 
-                foreach ([
-                    'parentescobeneficiario','numeroradicacion',
-                    'municipio','departamento','upcadicional'
-                ] as $k) {
+                foreach (
+                    [
+                        'parentescobeneficiario',
+                        'numeroradicacion',
+                        'municipio',
+                        'departamento',
+                        'upcadicional'
+                    ] as $k
+                ) {
                     $b[$k] = $b[$k] ?? '';
                 }
             }
@@ -452,7 +513,7 @@ if (!class_exists('UsuariosSaludConsultas')) {
                         'extension'               => $af['extension'],
                         'telefono'                => $af['rl_telefono'],
                         'fechaingresounicauca'    => $af['fechaingresounicauca'],
-                        'fechavencimientocontrato'=> $af['fechavencimientocontrato'],
+                        'fechavencimientocontrato' => $af['fechavencimientocontrato'],
                         'numeroradicacion'        => $af['rl_numeroradicacion'],
                         'provisional'             => $af['provisional'],
                         'tipovinculacion'         => $af['tipovinculacion'],
@@ -483,6 +544,216 @@ if (!class_exists('UsuariosSaludConsultas')) {
             }
 
             return $detalle;
+        }
+
+        /**
+         * Busca una persona por número de identificación exacto.
+         * Devuelve un array con el cotizante (primero) y sus beneficiarios.
+         */
+        public function getPersonaPorIdentificacion($identificacion)
+        {
+            $identificacion = trim($identificacion);
+            if ($identificacion === '') {
+                return null;
+            }
+
+            // ============================================================
+            // 1) Datos base de la persona
+            // ============================================================
+            $sqlPersona = "SELECT
+                    p.id,
+                    p.tipoidentificacion,
+                    p.numerodocumento,
+                    p.primernombre,
+                    p.segundonombre,
+                    p.primerapellido,
+                    p.segundoapellido,
+                    p.fechanacimiento,
+                    p.sexo,
+                    p.tiposangre,
+                    p.tiporh,
+                    -- Último estado
+                    ult.tipoafiliado,
+                    ult.tipo_estado,
+                    ult.fecha_inicio_estado AS fecha_afiliacion,
+                    ult.estado_descripcion,
+                    -- Última afiliación
+                    af.tipoafiliacion,
+                    af.fecharadicacion,
+                    ns.descripcion          AS nivel_salarial_desc,
+                    ns.nivel                AS nivel_salarial_codigo
+                FROM personas p
+                LEFT JOIN LATERAL (
+                    SELECT pe.tipoafiliado, pe.tipo_estado,
+                           pe.fecha_inicio_estado,
+                           e.descripcion AS estado_descripcion
+                    FROM personas_estados pe
+                    LEFT JOIN estados e ON e.id = pe.id_estado
+                    WHERE pe.id_persona = p.id
+                    ORDER BY pe.id DESC
+                    LIMIT 1
+                ) ult ON TRUE
+                LEFT JOIN LATERAL (
+                    SELECT a.id, a.tipoafiliacion, a.fecharadicacion, a.id_nivel_salarial
+                    FROM afiliaciones a
+                    WHERE a.id_cotizante = p.id
+                    ORDER BY a.fecharadicacion DESC NULLS LAST, a.id DESC
+                    LIMIT 1
+                ) af ON TRUE
+                LEFT JOIN niveles_salariales ns ON ns.id = af.id_nivel_salarial
+                WHERE p.numerodocumento = ?
+                LIMIT 1";
+
+            $personas = $this->ejecutarConsulta($sqlPersona, [$identificacion]);
+            if (empty($personas)) {
+                return null;
+            }
+            $persona = $personas[0];
+            $personaId = (int)$persona['id'];
+
+            // ============================================================
+            // 2) ¿Es cotizante? Si sí, traemos sus beneficiarios
+            // ============================================================
+            $sqlEsCotizante = "SELECT id FROM cotizantes WHERE id_persona = ? LIMIT 1";
+            $esCotizante    = $this->ejecutarConsulta($sqlEsCotizante, [$personaId]);
+
+            $beneficiarios = [];
+            if (!empty($esCotizante)) {
+                $cotizanteId = (int)$esCotizante[0]['id'];
+
+                $sqlBenef = "SELECT
+                        p.id,
+                        p.tipoidentificacion,
+                        p.numerodocumento,
+                        p.primernombre,
+                        p.segundonombre,
+                        p.primerapellido,
+                        p.segundoapellido,
+                        p.fechanacimiento,
+                        p.sexo,
+                        p.tiposangre,
+                        p.tiporh,
+                        cb.parentescobeneficiario,
+                        cb.numeroradicacion,
+                        -- Último estado del beneficiario
+                        ult.tipoafiliado,
+                        ult.tipo_estado,
+                        ult.fecha_inicio_estado AS fecha_afiliacion,
+                        ult.estado_descripcion
+                    FROM cotizantes c
+                    INNER JOIN cotizantes_beneficiarios cb
+                            ON cb.id_cotizante = c.id
+                    INNER JOIN beneficiarios b
+                            ON b.id = cb.id_beneficiario
+                    INNER JOIN personas p
+                            ON p.id = b.id_persona
+                    LEFT JOIN LATERAL (
+                        SELECT pe.tipoafiliado, pe.tipo_estado,
+                               pe.fecha_inicio_estado,
+                               e.descripcion AS estado_descripcion
+                        FROM personas_estados pe
+                        LEFT JOIN estados e ON e.id = pe.id_estado
+                        WHERE pe.id_persona = p.id
+                        ORDER BY pe.id DESC
+                        LIMIT 1
+                    ) ult ON TRUE
+                    WHERE c.id = ?
+                    ORDER BY cb.parentescobeneficiario, p.primerapellido, p.primernombre";
+
+                $beneficiarios = $this->ejecutarConsulta($sqlBenef, [$cotizanteId]);
+            }
+
+            // ============================================================
+            // 3) Formatear todo y armar el array final
+            // ============================================================
+            $resultado = [];
+
+            // --- Cotizante (o la persona consultada, sea cotizante o no) ---
+            $filaCot = $this->formatearFilaResultado($persona, 'COTIZANTE');
+            $resultado[] = $filaCot;
+
+            // --- Beneficiarios ---
+            foreach ($beneficiarios as $b) {
+                // Heredar el nivel salarial del cotizante (los beneficiarios no tienen uno propio)
+                $b['nivel_salarial_desc']   = $persona['nivel_salarial_desc']   ?? null;
+                $b['nivel_salarial_codigo'] = $persona['nivel_salarial_codigo'] ?? null;
+
+                $filaBen = $this->formatearFilaResultado($b, 'BENEFICIARIO');
+                $filaBen['parentesco'] = $b['parentescobeneficiario'] ?? '';
+                $resultado[] = $filaBen;
+            }
+
+            return $resultado;
+        }
+
+        /**
+         * Helper: convierte una fila cruda en el formato que espera el frontend.
+         */
+        private function formatearFilaResultado(array $row, $tipoAfiliadoDefault = 'COTIZANTE')
+        {
+            $nombreCompleto = trim(
+                ($row['primernombre']    ?? '') . ' ' .
+                    ($row['segundonombre']   ?? '') . ' ' .
+                    ($row['primerapellido']  ?? '') . ' ' .
+                    ($row['segundoapellido'] ?? '')
+            );
+
+            // Edad calculada
+            $edad = null;
+            if (!empty($row['fechanacimiento'])) {
+                try {
+                    $fn = new DateTime($row['fechanacimiento']);
+                    $hoy = new DateTime();
+                    $edad = $hoy->diff($fn)->y;
+                } catch (Exception $e) {
+                    $edad = null;
+                }
+            }
+
+            // Fecha de afiliación formateada dd/mm/YYYY
+            $fechaAfiliacion = '';
+            if (!empty($row['fecha_afiliacion'])) {
+                $fechaAfiliacion = date('d/m/Y', strtotime($row['fecha_afiliacion']));
+            }
+
+            // Tipo de afiliado (viene del estado o del default)
+            $tipoAfiliado = $row['tipoafiliado'] ?? '';
+            if ($tipoAfiliado === '' || $tipoAfiliado === null) {
+                $tipoAfiliado = $tipoAfiliadoDefault;
+            }
+            $tipoAfiliado = strtoupper($tipoAfiliado);
+
+            // Estado
+            $estado = $row['estado_descripcion'] ?? '';
+            if ($estado === '' && !empty($row['tipo_estado'])) {
+                $estado = $row['tipo_estado'];
+            }
+            if ($estado === '') {
+                $estado = 'Sin estado registrado';
+            }
+
+            // Nivel salarial: primero la descripción, si no el código, si no "—"
+            $nivel = $row['nivel_salarial_desc'] ?? '';
+            if ($nivel === '' || $nivel === null) {
+                $nivel = $row['nivel_salarial_codigo'] ?? '';
+            }
+            if ($nivel === '' || $nivel === null) {
+                $nivel = '—';
+            }
+
+            return [
+                'id'                         => (int)($row['id'] ?? 0),
+                'tipo_afiliado'              => $tipoAfiliado,
+                'tipoidentificacion'         => $row['tipoidentificacion'] ?? '',
+                'numerodocumento'            => $row['numerodocumento'] ?? '',
+                'nombre_completo'            => $nombreCompleto,
+                'edad'                       => $edad !== null ? $edad : '',
+                'fecha_afiliacion_formateada' => $fechaAfiliacion,
+                'nivel_salarial'             => $nivel,
+                'estado_descripcion'         => $estado,
+                'parentesco'                 => $row['parentescobeneficiario'] ?? '',
+                'prestadora'                 => 'NUEVA EPS',
+            ];
         }
     }
 }

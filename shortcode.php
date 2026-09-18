@@ -145,4 +145,7 @@ add_action('init', function () {
     add_action('wp_ajax_get_unisalud_consulta',               'ajax_get_unisalud_consulta');
     add_action('wp_ajax_nopriv_get_persona_detalle_salud', 'ajax_get_persona_detalle_salud');
     add_action('wp_ajax_get_persona_detalle_salud',        'ajax_get_persona_detalle_salud');
+
+    add_action('wp_ajax_nopriv_salud_consultar_por_identificacion', 'ajax_salud_consultar_por_identificacion');
+    add_action('wp_ajax_salud_consultar_por_identificacion',        'ajax_salud_consultar_por_identificacion');
 }, 5);
