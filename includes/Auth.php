@@ -183,12 +183,52 @@ class UsuariosSaludAuth
             if (!$db) {
                 return ['valid' => false, 'message' => 'Sin conexión', 'usuario' => null];
             }
-
-            // ✅ PDO: prepare devuelve PDOStatement
+            // ============================================================
+            // 1) Datos base de la persona
+            // ============================================================
             $stmt = $db->prepare(
-                "SELECT correo, identificacion, nombre_completo
-                FROM usuarios
-                WHERE identificacion = :identificacion
+                "SELECT
+                    p.id,
+                    p.tipoidentificacion,
+                    p.numerodocumento,
+                    p.primernombre,
+                    p.segundonombre,
+                    p.primerapellido,
+                    p.segundoapellido,
+                    p.fechanacimiento,
+                    p.sexo,
+                    p.tiposangre,
+                    p.tiporh,
+                    -- Último estado
+                    ult.tipoafiliado,
+                    ult.tipo_estado,
+                    ult.fecha_inicio_estado AS fecha_afiliacion,
+                    ult.estado_descripcion,
+                    -- Última afiliación
+                    af.tipoafiliacion,
+                    af.fecharadicacion,
+                    ns.descripcion          AS nivel_salarial_desc,
+                    ns.nivel                AS nivel_salarial_codigo
+                FROM personas p
+                LEFT JOIN LATERAL (
+                    SELECT pe.tipoafiliado, pe.tipo_estado,
+                           pe.fecha_inicio_estado,
+                           e.descripcion AS estado_descripcion
+                    FROM personas_estados pe
+                    LEFT JOIN estados e ON e.id = pe.id_estado
+                    WHERE pe.id_persona = p.id
+                    ORDER BY pe.id DESC
+                    LIMIT 1
+                ) ult ON TRUE
+                LEFT JOIN LATERAL (
+                    SELECT a.id, a.tipoafiliacion, a.fecharadicacion, a.id_nivel_salarial
+                    FROM afiliaciones a
+                    WHERE a.id_cotizante = p.id
+                    ORDER BY a.fecharadicacion DESC NULLS LAST, a.id DESC
+                    LIMIT 1
+                ) af ON TRUE
+                LEFT JOIN niveles_salariales ns ON ns.id = af.id_nivel_salarial
+                WHERE p.numerodocumento = :identificacion
                 LIMIT 1"
             );
 
@@ -196,17 +236,80 @@ class UsuariosSaludAuth
                 return ['valid' => false, 'message' => 'Error al preparar', 'usuario' => null];
             }
 
-            $stmt->execute([':identificacion' => $identificacionAfiliado]);
-
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$user) {
-                return ['valid' => false, 'message' => 'Usuario no encontrado', 'usuario' => null];
+            $stmt->execute(['identificacion' => $identificacionAfiliado]);
+            $persona = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // VALIDACIÓN CRÍTICA
+            if (!$persona) {
+                return [
+                    'valid'   => false,
+                    'message' => 'Afiliado no encontrado',
+                    'usuario' => null
+                ];
             }
 
+            $idPersona = $persona['id'];        
+
+            // ============================================================
+            // 2) ¿Es cotizante? Si sí, traemos sus beneficiarios
+            // ============================================================            
+            $stmt = $db->prepare("SELECT id FROM cotizantes WHERE id_persona = :idPersona LIMIT 1");
+            $stmt->execute(['idPersona' => $idPersona]);
+            $esCotizante = $stmt->fetch(PDO::FETCH_ASSOC); 
+
+            $beneficiarios = [];
+            if ($esCotizante && !empty($esCotizante['id'])) {       
+                $stmt = $db->prepare("SELECT
+                        p.id,
+                        p.tipoidentificacion,
+                        p.numerodocumento,
+                        p.primernombre,
+                        p.segundonombre,
+                        p.primerapellido,
+                        p.segundoapellido,
+                        p.fechanacimiento,
+                        p.sexo,
+                        p.tiposangre,
+                        p.tiporh,
+                        cb.parentescobeneficiario,
+                        cb.numeroradicacion,
+                        -- Último estado del beneficiario
+                        ult.tipoafiliado,
+                        ult.tipo_estado,
+                        ult.fecha_inicio_estado AS fecha_afiliacion,
+                        ult.estado_descripcion
+                    FROM cotizantes c
+                    INNER JOIN cotizantes_beneficiarios cb
+                            ON cb.id_cotizante = c.id
+                    INNER JOIN beneficiarios b
+                            ON b.id = cb.id_beneficiario
+                    INNER JOIN personas p
+                            ON p.id = b.id_persona
+                    LEFT JOIN LATERAL (
+                        SELECT pe.tipoafiliado, pe.tipo_estado,
+                               pe.fecha_inicio_estado,
+                               e.descripcion AS estado_descripcion
+                        FROM personas_estados pe
+                        LEFT JOIN estados e ON e.id = pe.id_estado
+                        WHERE pe.id_persona = p.id
+                        ORDER BY pe.id DESC
+                        LIMIT 1
+                    ) ult ON TRUE
+                    WHERE c.id = :id
+                    ORDER BY cb.parentescobeneficiario, p.primerapellido, p.primernombre");
+                $stmt->execute(['id' => $esCotizante['id']]);
+                $beneficiarios = $stmt->fetchAll(PDO::FETCH_ASSOC);                  
+            }
+            // ============================================================
+            // 3) Formatear todo y armar el array final
+            // ============================================================
+            $resultado = [];            
+            $resultado[] = $persona;
+            $resultado[] = $beneficiarios;
+            
             return [
                 'valid'   => true,
-                'usuario' => $user,
+                'usuario' => $resultado,
                 'message' => 'OK'
             ];
 
@@ -220,6 +323,7 @@ class UsuariosSaludAuth
                 'usuario' => null
             ];
         }
-    }
+    }    
+
 
 }

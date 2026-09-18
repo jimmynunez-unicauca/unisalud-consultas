@@ -100,20 +100,19 @@ add_action('wp_ajax_get_persona_detalle_salud',        'ajax_get_persona_detalle
  */
 function ajax_buscar_identificacion_afiliado()
 {
-    //UsuariosSaludAuth::requerirSesionAjax();
-    var_dump("php usuarios identificacion: ".$_POST['identificacion']);
-    $identificacion = isset($_POST['identificacion'])
-    ? preg_replace('/[^0-9]/', '', wp_unslash($_POST['identificacion']))
-    : '';
-        
+    UsuariosSaludAuth::requerirSesionAjax();    
+     $identificacion = isset($_POST['identificacion'])
+        ? preg_replace('/[^0-9]/', '', wp_unslash($_POST['identificacion']))
+        : '';
+
     if (empty($identificacion)) {
-        wp_send_json_error(['message' => 'Identificacion no especificado']);
+        wp_send_json_error(['message' => 'Identificación no especificada']);
     }
 
-    $resultado = UsuariosSaludAuth::buscarIdentificacionAfiliado($_POST['identificacion']);
-    var_dump("php usuarios resultado: ".$resultado);
-    if (!$resultado) {
-        wp_send_json_error(['message' => 'Usuario no encontrado']);
+    $resultado = UsuariosSaludAuth::buscarIdentificacionAfiliado($identificacion);
+    
+    if (!$resultado || empty($resultado['valid'])) {
+        wp_send_json_error(['message' => $resultado['message'] ?? 'Usuario no encontrado']);
     }
 
     wp_send_json_success($resultado);

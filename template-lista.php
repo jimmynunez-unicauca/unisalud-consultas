@@ -39,7 +39,7 @@ $segundosRestantes = UsuariosSaludAuth::segundosRestantes();
 
             <div class="consulta-afiliado-form-group">                
                 <input type="number" class="consulta-afiliado-identificacion-input" id="campo-identificacion" max="9999999999">
-                <div id="consulta-afiliado-correo-error" class="consulta-afiliado-error-msg">⚠️ Por favor ingresa una identificacion válido</div>
+                <div id="consulta-afiliado-correo-error" class="consulta-afiliado-error-msg" hidden>⚠️ Por favor ingresa una identificacion válido</div>
             </div>
             <button id="btn-consulta-afiliado" class="consulta-afiliado-btn-consultar">
                 <span id="consulta-afiliado-btn-consultar-text">CONSULTAR</span>
@@ -57,59 +57,87 @@ $segundosRestantes = UsuariosSaludAuth::segundosRestantes();
 
 
 <!-- inicio tabla -->
-<div class="usuarios-salud-container" hidden>
-    <!-- Barra de sesión -->
-    <div class="usuarios-sesion-bar">
-        <div class="usuarios-sesion-info">
-            <span class="usuarios-sesion-avatar">👤</span>
-            <span>
-                <strong><?php echo esc_html($nombre_sesion ?: 'Usuario'); ?></strong>
-                <small><?php echo esc_html($email_sesion); ?></small>
-            </span>
-        </div>
-        <button type="button" id="btn-cerrar-sesion" class="btn-cerrar-sesion">Cerrar sesión</button>
+<div class="usuarios-tabla-afiliado-container" hidden>
+    <!-- ============================================ -->
+    <!-- PÁRRAFO DE INSTRUCCIONES (arriba de la tabla) -->
+    <!-- ============================================ -->
+    <div class="instrucciones-consulta">
+        <p>
+            Si desea descargar el certificado de afiliación, seleccione de la siguiente lista el afiliado,
+            luego el tipo de certificado y presione el botón de generar.
+        </p>
+        <a href="#" class="ver-instrucciones">Ver instrucciones</a>
+    </div>
+    <!-- ============================================ -->
+    <!-- TABLA DE RESULTADOS                          -->
+    <!-- ============================================ -->
+    <div class="tabla-afiliados-wrapper">
+        <h3>RESULTADOS DE LA CONSULTA</h3>
+        <table class="tabla-afiliados">
+            <thead>
+                <tr>
+                    <th>SELECCIONAR</th>
+                    <th>TIPO DE AFILIACIÓN</th>
+                    <th>IDENTIFICACIÓN</th>
+                    <th>NOMBRE COMPLETO</th>
+                    <th>EDAD</th>
+                    <th>FECHA DE AFILIACIÓN</th>
+                    <th>NIVEL SALARIAL</th>
+                    <th>ESTADO DE AFILIACIÓN</th>
+                    <th>PRESTADORA DE SALUD AFILIADO</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-afiliados-body">
+                <!-- Se llena con JS -->
+            </tbody>
+        </table>
     </div>
 
-    <!-- Filtros -->
-    <div class="usuarios-filtros">
-        <div class="filtros-row">
-            <div class="filtro-item">
-                <label>Buscar por nombres, apellidos o documento</label>
-                <input type="text" id="filtro-nombre" class="filtro-input" placeholder="Escriba el texto a buscar...">
+    <!-- ============================================ -->
+    <!-- ACCIONES DEBAJO DE LA TABLA                  -->
+    <!-- ============================================ -->
+    <div class="acciones-consulta">
+
+        <!-- Fila 1: Tipo de certificado + Generar para + Descargar -->
+        <div class="acciones-fila-1">
+
+            <!-- Tipo de Certificado -->
+            <div class="bloque-tipo-certificado">
+                <h4>Tipo De Certificado</h4>
+                <p class="subtitulo">Tipo de certificado que desea generar</p>
+                <div class="opciones-certificado">
+                    <label class="opcion-radio">
+                        <input type="radio" name="tipo-certificado" value="individual">
+                        <span>INDIVIDUAL</span>
+                    </label>
+                    <label class="opcion-radio">
+                        <input type="radio" name="tipo-certificado" value="grupal">
+                        <span>GRUPO FAMILIAR</span>
+                    </label>
+                </div>
             </div>
-            <div class="filtro-item">
-                <label>Sexo</label>
-                <select id="filtro-estado" class="filtro-select">
-                    <option value="">Todos</option>
-                    <option value="Masculino">Masculino</option>
-                    <option value="Femenino">Femenino</option>
-                </select>
+
+            <!-- El Certificado Se Genera Para -->
+            <div class="bloque-genera-para">
+                <h4>El Certificado Se Genera Para:</h4>
+                <p class="subtitulo">[Opcional] Indique la razón por la que va a generar el certificado</p>
+                <input type="text" class="input-razon" placeholder="A quien va dirigido el certificado">
             </div>
-            <div class="filtro-item filtro-botones">
-                <button id="btn-limpiar" class="btn">LIMPIAR</button>
+
+            <!-- Botón Descargar -->
+            <div class="bloque-descargar">
+                <button type="button" class="btn-descargar">DESCARGAR</button>
             </div>
+
         </div>
+
+        <!-- Fila 2: Salir + Realizar nueva consulta -->
+        <div class="acciones-fila-2">
+            <button type="button" id="btn-cerrar-sesion" class="btn-salir">SALIR</button>
+            <button type="button" class="btn-nueva-consulta">REALIZAR UNA NUEVA CONSULTA</button>
+        </div>
+
     </div>
 
-    <div id="resultados-container">
-        <div id="usuarios-lista" class="usuarios-lista-principal">
-            <div class="loading">Cargando personas...</div>
-        </div>
-    </div>
-
-    <div id="paginacion-container" class="paginacion" style="display: none;"></div>
-</div>
-
-<!-- Modal de detalle -->
-<div id="modal-persona" class="modal-persona-overlay" style="display:none;">
-    <div class="modal-persona-content" role="dialog" aria-modal="true">
-        <div class="modal-persona-header">
-            <h2 id="modal-persona-titulo">Detalle de la persona</h2>
-            <button type="button" class="modal-persona-close" id="modal-persona-close" aria-label="Cerrar">&times;</button>
-        </div>
-        <div class="modal-persona-body" id="modal-persona-body">
-            <div class="loading">Cargando información...</div>
-        </div>
-    </div>
 </div>
 <!-- fin tabla -->
