@@ -63,35 +63,61 @@ jQuery(document).ready(function ($) {
     })();
     //fin tiempo
 
+    $('#btn-cerrar-sesion').on('click', function () {
+        // 🔑 Cerrar sesión en servidor y recargar
+        jQuery.post(usuarios_ajax.ajax_url, {
+            action: 'salud_cerrar_sesion',
+            nonce: usuarios_ajax.nonce
+        }).always(function () {
+            window.location.reload();
+        });
+    });
 
-    //inicio buscar identificacion
-    var msgErrorIdentificacion = document.querySelector('.usuarios-consulta-afiliado-container');
-    $('#btn-consulta-afiliado').on('click', function () {
-        var identificacion = $.trim($('#campo-identificacion').val());
-alert("identificacion: "+identificacion)
+    $('#btn-cerrar-sesion2').on('click', function () {
+        // 🔑 Cerrar sesión en servidor y recargar
+        jQuery.post(usuarios_ajax.ajax_url, {
+            action: 'salud_cerrar_sesion',
+            nonce: usuarios_ajax.nonce
+        }).always(function () {
+            window.location.reload();
+        });
+    });
+
+    var campoIdentificacion = $('#campo-identificacion');
+    var btnConsultaAfiliado = $('#btn-consulta-afiliado');
+
+    campoIdentificacion.on('keypress', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            btnConsultaAfiliado.trigger('click');
+        }
+    });
+
+    //inicio buscar identificacion    
+    $('#btn-consulta-afiliado').on('click', function () {        
         $.ajax({
             url: usuarios_ajax.ajax_url,
             type: 'POST',
             data: {
                 action: "buscar_identificacion_afiliado",
                 nonce: NONCE,
-                identificacion: identificacion
+                identificacion: $('#campo-identificacion').val()
             },
             success: function (resp) {
-                if (resp && resp.success && resp.data && resp.data.valid) {                    
+                var formConsultaAfiliado = document.querySelector('.usuarios-consulta-afiliado-container');
+                var tablaAfiliado = document.querySelector('.usuarios-tabla-afiliado-container');
+                var btnSalirConsultaAfiliado = document.querySelector('.consulta-afiliado-btn-salir');
+                var msgErrorIdentificacion = document.querySelector('#consulta-afiliado-correo-error');
+                if (resp && resp.success && resp.data && resp.data.valid) {
                     pintarTablaAfiliados(resp.data.usuario);
-
-                    var formConsultaAfiliado = document.querySelector('.usuarios-consulta-afiliado-container');
                     formConsultaAfiliado.hidden = true;
-
-                    var formTablaAfiliado = document.querySelector('.usuarios-tabla-afiliado-container');
-                    formTablaAfiliado.hidden = false;
-
-                    msgErrorIdentificacion.hidden = false;
-                } else {
+                    tablaAfiliado.hidden = false;
+                    btnSalirConsultaAfiliado.hidden = true;
                     msgErrorIdentificacion.hidden = true;
+                } else {
+                    msgErrorIdentificacion.hidden = false;
                     formConsultaAfiliado.hidden = false;
-                    formTablaAfiliado.hidden = true;
+                    tablaAfiliado.hidden = true;
                     console.error("Error:", resp?.data?.message || 'Error inesperado');
                 }
             },
@@ -174,5 +200,20 @@ alert("identificacion: "+identificacion)
         return `${d}/${m}/${y}`;
     }
     //fin tabla    
+
+
+    $('#btn-realizar-nueva-consulta').on('click', function () {
+        var formConsultaAfiliado = document.querySelector('.usuarios-consulta-afiliado-container');
+        var tablaAfiliado = document.querySelector('.usuarios-tabla-afiliado-container');
+        var btnSalirConsultaAfiliado = document.querySelector('.consulta-afiliado-btn-salir');
+        var msgErrorIdentificacion = document.querySelector('.consulta-afiliado-identificacion-msg-error');
+        var campoIdentificacionNuevaConsulta = document.querySelector('#campo-identificacion');
+
+        formConsultaAfiliado.hidden = false;
+        tablaAfiliado.hidden = true;
+        btnSalirConsultaAfiliado.hidden = false;
+        msgErrorIdentificacion.hidden = true;
+        campoIdentificacionNuevaConsulta.value = '';
+    });
 
 });

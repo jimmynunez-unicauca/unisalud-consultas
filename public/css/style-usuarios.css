@@ -12,7 +12,6 @@
     border-radius: 5px;
     cursor: pointer;
     font-weight: 600;
-    transition: background 0.3s;
 }
 
 .btn:hover {
@@ -51,20 +50,13 @@
 }
 
 .btn-cerrar-sesion {
-    background: #d63638;
     color: #fff;
     border: none;
     padding: 8px 16px;
     border-radius: 5px;
     font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
+    cursor: pointer;    
 }
-
-.btn-cerrar-sesion:hover {
-    background: #b32d2e;
-}
-
 
 /*formulario consulta prestadoe*/
 @import url('variables.css');
@@ -152,12 +144,18 @@ body {
     padding: 11px 20px 10px 21px;    
 }
 
+.usuarios-consulta-afiliado-container .consulta-afiliado-form-group .consulta-afiliado-identificacion-msg-error {
+    position: absolute;
+    top: 50px;
+    left: 10px;
+}
+
 .usuarios-consulta-afiliado-container .consulta-afiliado-btn-consultar {
     position: relative;
     top: 50px;
-    left: 120px;
+    left: 110px;
     width: 109px;
-    height: 37px;
+    height: 45px;
     /* UI Properties */
     background: var(--primario) 0% 0% no-repeat padding-box;
     background: #000066 0% 0% no-repeat padding-box;
@@ -186,11 +184,38 @@ body {
 
     position: relative;
     top: 27px;
-    left: 160px;
+    left: 150px;
     width: 109px;
-    height: 37px;
+    height: 45px;
+}
+.consulta-afiliado-btn-salir:hover {
+    background: none !important;
 }
 .consulta-afiliado-btn-salir span{
+    font: var(--unnamed-font-style-normal) normal var(--unnamed-font-weight-600) var(--unnamed-font-size-14)/var(--unnamed-line-spacing-19) var(--unnamed-font-family-open-sans);
+    letter-spacing: var(--unnamed-character-spacing-0);
+    color: var(--primario);
+    text-align: center;
+    font: normal normal 600 14px/19px Open Sans;
+    letter-spacing: 0px;
+    color: #000066;
+    opacity: 1;    
+}
+.consulta-afiliado-btn-salir2 {
+    background: var(--blanco) 0% 0% no-repeat padding-box;
+    border: 2px solid var(--primario);
+    background: #FFFFFF 0% 0% no-repeat padding-box;
+    border: 2px solid #000066;
+    border-radius: 22px;
+    opacity: 1;    
+    
+    width: 109px;
+    height: 45px;
+}
+.consulta-afiliado-btn-salir2:hover {
+    background: none !important;
+}
+.consulta-afiliado-btn-salir2 span{
     font: var(--unnamed-font-style-normal) normal var(--unnamed-font-weight-600) var(--unnamed-font-size-14)/var(--unnamed-line-spacing-19) var(--unnamed-font-family-open-sans);
     letter-spacing: var(--unnamed-character-spacing-0);
     color: var(--primario);
@@ -228,27 +253,31 @@ body {
             top: 61px;
             left: 112px;
             width: 241px;
-            height: 127px;
+            height: 135px;
             background: var(--blanco) 0% 0% no-repeat padding-box;
             background: #FFFFFF 0% 0% no-repeat padding-box;
             box-shadow: 0px 0px 12px #00000029;
             border-radius: 7px;
             opacity: 1;
+            padding: 15px;
         }
         #session-timer .timer-row {
             display: flex;
             align-items: center;
             gap: 8px;
+            border-bottom: 1px solid gray;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
         }
         #session-timer .timer-icon {
             font-size: 16px;
-            color: #667eea;
-        }
+            color: #667eea;            
+        }        
         #session-timer .timer-clock {
             font-size: 18px;
             font-weight: 600;
             color: #333;
-            font-variant-numeric: tabular-nums;
+            font-variant-numeric: tabular-nums;            
         }
         #session-timer .timer-message {
             font: var(--unnamed-font-style-normal) normal var(--unnamed-font-weight-normal) var(--unnamed-font-size-16)/20px var(--unnamed-font-family-open-sans);
@@ -295,6 +324,10 @@ body {
 }
 
 /* Tabla */
+.usuarios-tabla-afiliado-container{
+    margin-top: 200px;
+}
+
 .tabla-afiliados-wrapper {
     margin-top: 10px;
     font-family: Arial, sans-serif;
@@ -366,6 +399,7 @@ body {
     flex: 0 0 auto;
     display: flex;
     align-items: flex-end;
+    padding-top: 50px;
 }
 
 .acciones-consulta h4 {

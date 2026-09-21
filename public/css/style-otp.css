@@ -108,9 +108,9 @@ body {
 .usuarios-otp-container .otp-btn {
     position: relative;
     top: 50px;
-    left: 100px;
+    left: 110px;
     width: 109px;
-    height: 37px;
+    height: 45px;
     /* UI Properties */
     background: var(--primario) 0% 0% no-repeat padding-box;
     background: #000066 0% 0% no-repeat padding-box;
@@ -205,6 +205,7 @@ body {
     text-decoration: underline;
     transition: all 0.2s ease;
     user-select: none;
+    text-decoration: none;
 }
 .usuarios-otp-container .otp-reenviar.disabled {
     color: #A3A3A3;

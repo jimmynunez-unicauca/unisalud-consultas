@@ -88,7 +88,7 @@ jQuery(document).ready(function ($) {
                 otpExpirado = true;
                 $btnVerificar.prop('disabled', true);
                 $reenviar.removeClass('disabled');
-                //mostrarError($codigoInput, $codigoError, '⏰ El código ha expirado. Solicita uno nuevo.');
+                //mostrarError($codigoInput, $codigoError, 'El código ha expirado. Solicita uno nuevo.');
                 return;
             }
             $timerVal.text(formatearTiempo(tiempoRestante));
@@ -144,11 +144,11 @@ jQuery(document).ready(function ($) {
         var correo = $.trim($correoInput.val());
 
         if (!correo) {
-            mostrarError($correoInput, $correoError, '⚠️ Por favor ingresa tu correo');
+            mostrarError($correoInput, $correoError, 'Por favor ingresa tu correo');
             return;
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
-            mostrarError($correoInput, $correoError, '⚠️ Correo con formato inválido');
+            mostrarError($correoInput, $correoError, 'Correo con formato inválido');
             return;
         }
 
@@ -193,7 +193,7 @@ jQuery(document).ready(function ($) {
     // --------------------------------------------------
     $btnVerificar.on('click', function () {
         if (otpExpirado) {
-            mostrarError($codigoInput, $codigoError, '⏰ El código ha expirado. Solicita uno nuevo.');
+            mostrarError($codigoInput, $codigoError, 'El código ha expirado. Solicita uno nuevo.');
             return;
         }
 
@@ -201,12 +201,12 @@ jQuery(document).ready(function ($) {
         var codigo = obtenerCodigoOTP();   // 👈 antes era $codigoInput.val()
 
         if (!codigo) {
-            mostrarError($codigoInput, $codigoError, '⚠️ Por favor ingresa el código OTP');
+            mostrarError($codigoInput, $codigoError, 'Por favor ingresa el código OTP');
             marcarErrorInputsOTP();
             return;
         }
         if (!/^\d{6}$/.test(codigo)) {
-            mostrarError($codigoInput, $codigoError, '⚠️ El código debe tener 6 dígitos numéricos');
+            mostrarError($codigoInput, $codigoError, 'sEl código debe tener 6 dígitos numéricos');
             marcarErrorInputsOTP();
             return;
         }

@@ -39,7 +39,7 @@ $segundosRestantes = UsuariosSaludAuth::segundosRestantes();
 
             <div class="consulta-afiliado-form-group">                
                 <input type="number" class="consulta-afiliado-identificacion-input" id="campo-identificacion" max="9999999999">
-                <div id="consulta-afiliado-correo-error" class="consulta-afiliado-error-msg" hidden>⚠️ Por favor ingresa una identificacion válido</div>
+                <div id="consulta-afiliado-correo-error" class="consulta-afiliado-identificacion-msg-error" hidden>Por favor ingresa una identificacion válido</div>
             </div>
             <button id="btn-consulta-afiliado" class="consulta-afiliado-btn-consultar">
                 <span id="consulta-afiliado-btn-consultar-text">CONSULTAR</span>
@@ -126,15 +126,17 @@ $segundosRestantes = UsuariosSaludAuth::segundosRestantes();
 
             <!-- Botón Descargar -->
             <div class="bloque-descargar">
-                <button type="button" class="btn-descargar">DESCARGAR</button>
+                <button class="btn-descargar">DESCARGAR</button>
             </div>
 
         </div>
 
         <!-- Fila 2: Salir + Realizar nueva consulta -->
         <div class="acciones-fila-2">
-            <button type="button" id="btn-cerrar-sesion" class="btn-salir">SALIR</button>
-            <button type="button" class="btn-nueva-consulta">REALIZAR UNA NUEVA CONSULTA</button>
+            <button id="btn-cerrar-sesion2" class="consulta-afiliado-btn-salir2">
+                <span id="consulta-afiliado-btn-salir-text">SALIR</span> 
+            </button>
+            <button class="btn-nueva-consulta" id="btn-realizar-nueva-consulta">REALIZAR UNA NUEVA CONSULTA</button>
         </div>
 
     </div>
