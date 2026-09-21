@@ -2,10 +2,12 @@ jQuery(document).ready(function ($) {
     var cfg = window.usuarios_otp_ajax || {};
     var API = cfg.ajax_url;
     var NONCE = cfg.nonce;
-    var REDIRECT = cfg.redirect;        
+    var REDIRECT = cfg.redirect;
 
     var OTP_DURATION = 1 * 30; // 2 minutos en segundos
 
+    var $optContainer = $('.usuarios-otp-container');
+    var $optCard = $('.otp-card');
     var $step1 = $('#otp-step1');
     var $step2 = $('#otp-step2');
     var $mensaje = $('#otp-mensaje');
@@ -22,8 +24,8 @@ jQuery(document).ready(function ($) {
     var $btnVerificarText = $('#otp-btn-verificar-text');
     var $btnVerificarSpinner = $('#otp-btn-verificar-spinner');
     var $reenviar = $('#otp-reenviar');
-    var $success = $('#otp-success');    
-    var $timerVal = $('#otp-timer-value');    
+    var $success = $('#otp-success');
+    var $timerVal = $('#otp-timer-value');
     var $correoDestino = $('#otp-correo-destino');
 
     var currentEmail = '';
@@ -74,8 +76,8 @@ jQuery(document).ready(function ($) {
             timerInterval = null;
         }
         tiempoRestante = OTP_DURATION;
-        otpExpirado = false;        
-        $timerVal.removeClass('warning expired').text(formatearTiempo(tiempoRestante));        
+        otpExpirado = false;
+        $timerVal.removeClass('warning expired').text(formatearTiempo(tiempoRestante));
         $timerVal.prop('disabled', false);
         $btnVerificar.prop('disabled', false);
 
@@ -84,7 +86,7 @@ jQuery(document).ready(function ($) {
             if (tiempoRestante <= 0) {
                 clearInterval(timerInterval);
                 timerInterval = null;
-                $timerVal.text('0:00').addClass('expired');                                
+                $timerVal.text('0:00').addClass('expired');
                 otpExpirado = true;
                 $btnVerificar.prop('disabled', true);
                 $reenviar.removeClass('disabled');
@@ -93,7 +95,7 @@ jQuery(document).ready(function ($) {
             }
             $timerVal.text(formatearTiempo(tiempoRestante));
             if (tiempoRestante <= 60) {
-                $timerVal.addClass('warning');                
+                $timerVal.addClass('warning');
             } else {
                 $timerVal.removeClass('warning');
                 $timer.removeClass('warning');
@@ -105,13 +107,13 @@ jQuery(document).ready(function ($) {
         if (timerInterval) {
             clearInterval(timerInterval);
             timerInterval = null;
-        }        
+        }
     }
 
     // --------------------------------------------------
     // AJAX
     // --------------------------------------------------
-    function peticion(action, data, onSuccess, onError) {                
+    function peticion(action, data, onSuccess, onError) {
         var payload = $.extend({ action: action, nonce: NONCE }, data);
         $.ajax({
             url: API,
@@ -164,11 +166,6 @@ jQuery(document).ready(function ($) {
                 $step2.removeClass('hidden');
                 $digitInputs.eq(0).trigger('focus');
 
-                // 🔑 Sincronizar duración real desde el servidor
-                /*if (data.duracion) {
-                    OTP_DURATION = parseInt(data.duracion, 10);
-                }*/
-
                 iniciarTemporizador();
                 toggleSpinner($btnBuscar, $btnBuscarText, $btnBuscarSpinner, false);
             }, function (err) {
@@ -191,6 +188,7 @@ jQuery(document).ready(function ($) {
     // --------------------------------------------------
     // Paso 2: verificar OTP
     // --------------------------------------------------
+
     $btnVerificar.on('click', function () {
         if (otpExpirado) {
             mostrarError($codigoInput, $codigoError, 'El código ha expirado. Solicita uno nuevo.');
@@ -198,7 +196,7 @@ jQuery(document).ready(function ($) {
         }
 
         limpiarErrores();
-        var codigo = obtenerCodigoOTP();   // 👈 antes era $codigoInput.val()
+        var codigo = obtenerCodigoOTP();
 
         if (!codigo) {
             mostrarError($codigoInput, $codigoError, 'Por favor ingresa el código OTP');
@@ -206,7 +204,7 @@ jQuery(document).ready(function ($) {
             return;
         }
         if (!/^\d{6}$/.test(codigo)) {
-            mostrarError($codigoInput, $codigoError, 'sEl código debe tener 6 dígitos numéricos');
+            mostrarError($codigoInput, $codigoError, 'El código debe tener 6 dígitos numéricos');
             marcarErrorInputsOTP();
             return;
         }
@@ -217,13 +215,14 @@ jQuery(document).ready(function ($) {
             detenerTemporizador();
             $codigoInput.val('').css('border-color', '#4caf50');
             $digitInputs.val('').removeClass('filled').css('border-color', '#4caf50');
-            $step2.addClass('hidden');            
-            $success.text('🎉 ¡Verificación exitosa! Bienvenido ' + data.nombre).addClass('show');
-            toggleSpinner($btnVerificar, $btnVerificarText, $btnVerificarSpinner, false);
+            
+            $step1.addClass('hidden');
+            $step2.addClass('hidden');
+            $optCard.addClass('hidden');        
+            $optContainer.addClass('hidden');   
 
-            setTimeout(function () {
-                window.location.href = REDIRECT;
-            }, 1500);
+            //toggleSpinner($btnVerificar, $btnVerificarText, $btnVerificarSpinner, false);
+            window.location.href = REDIRECT;
         }, function (err) {
             mostrarError($codigoInput, $codigoError, err.message);
             marcarErrorInputsOTP();
@@ -251,11 +250,7 @@ jQuery(document).ready(function ($) {
         $reenviar.text('⏳ Enviando...').css('cursor', 'default');
 
         peticion('salud_reenviar_otp', { email: currentEmail }, function () {
-            $reenviar.text('✅ Reenviado');
-
-            /*if (data && data.duracion) {
-                OTP_DURATION = parseInt(data.duracion, 10);
-            }*/
+            $reenviar.text('Reenviado');
 
             iniciarTemporizador();
             limpiarErrores();
@@ -269,10 +264,6 @@ jQuery(document).ready(function ($) {
             $reenviar.text(original).css('cursor', 'pointer');
         });
     });
-
-
-
-
 
 
 
@@ -388,7 +379,4 @@ jQuery(document).ready(function ($) {
         $(this).select();
     });
 
-
-    // Foco inicial
-    //$correoInput.trigger('focus');
 });

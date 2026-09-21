@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
                 <span id="otp-btn-buscar-text">ENVIAR</span>
                 <span id="otp-btn-buscar-spinner" class="otp-spinner hidden"></span>
             </button>
-        </div>                
+        </div>          
 
         <!-- Paso 2: OTP -->
         <div id="otp-step2" class="hidden">
@@ -38,7 +38,8 @@ if (!defined('ABSPATH')) {
                     <input type="text" class="otp-digit-input" maxlength="1" inputmode="numeric" autocomplete="off" data-index="4">
                     <input type="text" class="otp-digit-input" maxlength="1" inputmode="numeric" autocomplete="off" data-index="5">
                 </div>
-                <input type="hidden" id="otp-codigo" value="">
+            </div>
+            <input type="hidden" id="otp-codigo" value="">
             <div id="otp-codigo-error" class="otp-error-msg">⚠️ Código incorrecto, intenta nuevamente</div>
             <div class="otp-hint">
                 <span class="otp-timer-value" id="otp-timer-value">2:00</span>
@@ -50,6 +51,5 @@ if (!defined('ABSPATH')) {
             </button>            
         </div>
 
-        <div id="otp-success" class="otp-success-msg">🎉 ¡Verificación exitosa!</div>
     </div>
 </div>
