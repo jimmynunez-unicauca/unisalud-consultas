@@ -47,8 +47,8 @@
 .usuarios-otp-container .otp-form-group input {
     width: 100%;
     padding: 8px 16px;
-    border: 1px solid #DEDBDB;
-    border-radius: 12px;
+    border: 1px solid #DEDBDB !important;
+    border-radius: 12px !important;
     font: normal normal normal 14px/24px Open Sans !important;
     transition: all 0.3s ease;
     outline: none;
@@ -80,6 +80,9 @@
 }
 
 .usuarios-otp-container .otp-btn:hover:not(:disabled) {
+    color: #000066;
+    background: #FFFFFF;
+    border: 1px solid #000066;
     transform: translateY(-2px);
     box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
 }
@@ -90,7 +93,9 @@
 }
 
 .usuarios-otp-container .otp-btn-secondary {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: #000066 !important;
+    color: #fff !important;
+    border-color: #000066 !important;
 }
 
 .usuarios-otp-container .otp-btn-secondary:hover:not(:disabled) {
@@ -287,4 +292,186 @@
 
 .otp-reenviar-link:hover {
     text-decoration: underline;
+}
+
+.btn-consultar {
+    text-align: center;
+    font: normal normal 600 14px/19px Open Sans;
+    letter-spacing: 0px;
+    color: #FFFFFF;
+    opacity: 1;
+}
+
+/* Título y subtítulo */
+.otp-titulo {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a6e;
+    margin: 0 0 14px 0;
+    text-align: center;
+}
+
+.otp-subtitulo {
+    font-size: 13.5px;
+    color: #6b6f8a;
+    text-align: center;
+    line-height: 1.6;
+    margin: 0 0 24px 0;
+}
+
+/* Input de correo estilo línea */
+.otp-input-lineal {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 14px;
+    border: 1px solid #e4e6f0;
+    border-radius: 8px;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.otp-input-lineal:focus {
+    border-color: #4a50a0;
+    box-shadow: 0 0 0 3px rgba(74, 80, 160, 0.08);
+}
+
+/* Las 6 casillas del OTP */
+.otp-cajas-wrapper {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 24px 0 8px;
+}
+
+.otp-caja {
+    width: 48px;
+    height: 56px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 600;
+    color: #1a1a3e;
+    border: 2px solid #e4e6f0;
+    border-radius: 10px;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.otp-caja:focus {
+    border-color: #4a50a0;
+    box-shadow: 0 0 0 3px rgba(74, 80, 160, 0.08);
+}
+
+/* Línea del timer + reenviar */
+.otp-timer-linea {
+    text-align: center;
+    font-size: 13px;
+    margin: 12px 0 20px;
+    color: #4a50a0;
+}
+
+.otp-timer-linea #otp-timer-value {
+    color: #00b3e6;
+    font-weight: 600;
+    margin-right: 8px;
+}
+
+.otp-timer-linea #otp-timer-value.expirado {
+    color: #c4243a;
+}
+
+.otp-reenviar-link {
+    color: #00b3e6;
+    cursor: pointer;
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+.otp-reenviar-link:hover {
+    color: #0091bc;
+}
+
+/* Botón principal estilo pill */
+.otp-btn {
+    display: block;
+    margin: 0 auto;
+    padding: 12px 40px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: #1a1a6e;
+    color: #fff;
+    border: none;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+}
+
+.otp-btn:hover:not(:disabled) {
+    background: #0f0f5e;
+    transform: translateY(-1px);
+}
+
+.otp-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Error */
+.otp-error-msg {
+    color: #c4243a;
+    font-size: 12.5px;
+    text-align: center;
+    margin-top: 6px;
+    display: none;
+}
+
+.otp-error-msg.show {
+    display: block;
+}
+
+/* Éxito */
+.otp-success-msg {
+    color: #1a8a5c;
+    font-weight: 600;
+    text-align: center;
+    padding: 10px;
+    background: #e8f7f0;
+    border-radius: 8px;
+    display: none;
+}
+
+.otp-success-msg.show {
+    display: block;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Texto legal de reCAPTCHA */
+.otp-legal {
+    font-size: 10.5px;
+    color: #9498b3;
+    text-align: center;
+    margin-top: 18px;
+    line-height: 1.5;
+}
+
+.otp-legal a {
+    color: #4a50a0;
+    text-decoration: underline;
+}
+
+.otp-legal a:hover {
+    color: #2a2f80;
+}
+
+/* Ocultar insignia flotante de reCAPTCHA v3 */
+.grecaptcha-badge {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
 }

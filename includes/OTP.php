@@ -316,4 +316,32 @@ class UsuariosSaludOTP
             'expires_at' => $expira,
         ];
     }
+
+    /**
+     * Verifica si un correo ha intentado enviar OTP demasiadas veces.
+     * Máximo 5 envíos por hora por correo, y máximo 10 por usuario.
+     */
+    public static function estaBloqueadoPorRateLimit($email, $usuarioId = 0)
+    {
+        $db = UsuariosSaludDatabase::mysql();
+        if (!$db) return false;
+
+        // Contar envíos en la última hora
+        $stmt = $db->prepare(
+            "SELECT COUNT(*) AS total
+         FROM usuarios_otp_historial
+         WHERE email = ?
+           AND accion IN ('envio','reenvio')
+           AND fecha >= DATE_SUB(NOW(), INTERVAL 1 HOUR)"
+        );
+        $stmt->bind_param('s', $email);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $stmt->close();
+
+        $total = $row ? (int)$row['total'] : 0;
+
+        return ($total >= 5);  // más de 5 envíos por hora = bloqueado
+    }
 }

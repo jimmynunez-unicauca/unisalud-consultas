@@ -95,7 +95,7 @@ class UsuariosSaludAuth
             'nombre'         => $usuario['nombre']         ?? '',
             'email'          => $usuario['email']          ?? '',
             'identificacion' => $usuario['identificacion'] ?? '',
-            'created_at'     => time(),
+            'created_at'     => time(),   // ← ⚠️ ESTA LÍNEA ES CRÍTICA
         ];
 
         if (function_exists('session_regenerate_id')) {

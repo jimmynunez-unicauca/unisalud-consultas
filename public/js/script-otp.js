@@ -4,7 +4,7 @@ jQuery(document).ready(function ($) {
     var NONCE = cfg.nonce;
     var REDIRECT = cfg.redirect;
 
-    var OTP_DURATION = 2 * 60; // 2 minutos en segundos
+    var OTP_DURATION = 2 * 60;
 
     var $step1 = $('#otp-step1');
     var $step2 = $('#otp-step2');
@@ -14,26 +14,65 @@ jQuery(document).ready(function ($) {
     var $btnBuscar = $('#otp-btn-buscar');
     var $btnBuscarText = $('#otp-btn-buscar-text');
     var $btnBuscarSpinner = $('#otp-btn-buscar-spinner');
-    var $codigoInput = $('#otp-codigo');
-    var $codigoError = $('#otp-codigo-error');
     var $btnVerificar = $('#otp-btn-verificar');
     var $btnVerificarText = $('#otp-btn-verificar-text');
     var $btnVerificarSpinner = $('#otp-btn-verificar-spinner');
+    var $codigoError = $('#otp-codigo-error');
     var $reenviar = $('#otp-reenviar');
     var $success = $('#otp-success');
-    var $timer = $('#otp-timer');
     var $timerVal = $('#otp-timer-value');
-    var $timerExp = $('#otp-timer-expirado');
     var $correoDestino = $('#otp-correo-destino');
+
+    // Las 6 casillas
+    var $cajas = $('#otp-d1, #otp-d2, #otp-d3, #otp-d4, #otp-d5, #otp-d6');
 
     var currentEmail = '';
     var timerInterval = null;
     var tiempoRestante = OTP_DURATION;
     var otpExpirado = false;
 
-    // --------------------------------------------------
-    // Helpers UI
-    // --------------------------------------------------
+    // ============================================================
+    //  reCAPTCHA v3 — Obtener token
+    // ============================================================
+    function obtenerRecaptchaToken() {
+        var deferred = $.Deferred();
+
+        if (typeof grecaptcha === 'undefined') {
+            console.warn('[RECAPTCHA] grecaptcha no está disponible');
+            deferred.resolve('');
+            return deferred.promise();
+        }
+
+        var siteKey = (window.usuarios_otp_ajax && usuarios_otp_ajax.recaptcha_site_key)
+            ? usuarios_otp_ajax.recaptcha_site_key
+            : '';
+        var action = (window.usuarios_otp_ajax && usuarios_otp_ajax.recaptcha_action)
+            ? usuarios_otp_ajax.recaptcha_action
+            : 'salud_login';
+
+        if (!siteKey) {
+            console.warn('[RECAPTCHA] site key no configurada');
+            deferred.resolve('');
+            return deferred.promise();
+        }
+
+        grecaptcha.ready(function () {
+            grecaptcha.execute(siteKey, { action: action })
+                .then(function (token) {
+                    deferred.resolve(token);
+                })
+                .catch(function (err) {
+                    console.error('[RECAPTCHA] error al ejecutar:', err);
+                    deferred.resolve('');
+                });
+        });
+
+        return deferred.promise();
+    }
+
+    // ============================================================
+    //  Helpers UI
+    // ============================================================
     function toggleSpinner($btn, $text, $spinner, show) {
         if (show) {
             $text.css('visibility', 'hidden');
@@ -49,14 +88,18 @@ jQuery(document).ready(function ($) {
     function limpiarErrores() {
         $correoError.removeClass('show');
         $codigoError.removeClass('show');
-        $correoInput.css('border-color', '#e0e0e0');
-        $codigoInput.css('border-color', '#e0e0e0');
-        $mensaje.removeClass('error');
+        $correoInput.css('border-color', '');
+        $cajas.css('border-color', '');
     }
 
-    function mostrarError($input, $error, mensaje) {
-        $input.css('border-color', '#f5576c');
-        $error.text(mensaje).addClass('show');
+    function mostrarErrorCorreo(msg) {
+        $correoInput.css('border-color', '#c4243a');
+        $correoError.text(msg).addClass('show');
+    }
+
+    function mostrarErrorOtp(msg) {
+        $cajas.css('border-color', '#c4243a');
+        $codigoError.text(msg).addClass('show');
     }
 
     function formatearTiempo(seg) {
@@ -65,19 +108,27 @@ jQuery(document).ready(function ($) {
         return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
     }
 
-    // --------------------------------------------------
-    // Temporizador
-    // --------------------------------------------------
+    function obtenerCodigo() {
+        var codigo = '';
+        $cajas.each(function () {
+            codigo += $(this).val() || '';
+        });
+        return codigo;
+    }
+
+    function limpiarCajas() {
+        $cajas.val('');
+        $('#otp-d1').trigger('focus');
+    }
+
+    // ============================================================
+    //  Timer
+    // ============================================================
     function iniciarTemporizador() {
-        if (timerInterval) {
-            clearInterval(timerInterval);
-            timerInterval = null;
-        }
+        if (timerInterval) clearInterval(timerInterval);
         tiempoRestante = OTP_DURATION;
         otpExpirado = false;
-        $timer.removeClass('hidden warning expired');
-        $timerVal.removeClass('warning expired').text(formatearTiempo(tiempoRestante));
-        $timerExp.addClass('hidden');
+        $timerVal.text(formatearTiempo(tiempoRestante)).removeClass('expirado');
         $btnVerificar.prop('disabled', false);
 
         timerInterval = setInterval(function () {
@@ -85,74 +136,123 @@ jQuery(document).ready(function ($) {
             if (tiempoRestante <= 0) {
                 clearInterval(timerInterval);
                 timerInterval = null;
-                $timerVal.text('0:00').addClass('expired');
-                $timer.addClass('expired');
-                $timerExp.removeClass('hidden');
+                $timerVal.text('00:00').addClass('expirado');
                 otpExpirado = true;
                 $btnVerificar.prop('disabled', true);
-                mostrarError($codigoInput, $codigoError, '⏰ El código ha expirado. Solicita uno nuevo.');
+                mostrarErrorOtp('⏰ El código ha expirado. Solicita uno nuevo.');
                 return;
             }
             $timerVal.text(formatearTiempo(tiempoRestante));
-            if (tiempoRestante <= 60) {
-                $timerVal.addClass('warning');
-                $timer.addClass('warning');
-            } else {
-                $timerVal.removeClass('warning');
-                $timer.removeClass('warning');
+            if (tiempoRestante <= 30) {
+                $timerVal.addClass('expirado');
             }
         }, 1000);
     }
 
-    function detenerTemporizador() {
-        if (timerInterval) {
-            clearInterval(timerInterval);
-            timerInterval = null;
-        }
-        $timer.addClass('hidden');
-    }
+    // ============================================================
+    //  Manejo de las 6 cajas
+    // ============================================================
+    $cajas.on('input', function (e) {
+        var $this = $(this);
+        var val = $this.val().replace(/\D/g, '').slice(0, 1);
+        $this.val(val);
 
-    // --------------------------------------------------
-    // AJAX
-    // --------------------------------------------------
+        if (val.length === 1) {
+            var index = $cajas.index(this);
+            if (index < $cajas.length - 1) {
+                $cajas.eq(index + 1).trigger('focus');
+            }
+        }
+    });
+
+    $cajas.on('keydown', function (e) {
+        var $this = $(this);
+        var index = $cajas.index(this);
+
+        if (e.key === 'Backspace' && $this.val() === '' && index > 0) {
+            e.preventDefault();
+            $cajas.eq(index - 1).trigger('focus').val('');
+        }
+
+        if (e.key === 'ArrowLeft' && index > 0) {
+            e.preventDefault();
+            $cajas.eq(index - 1).trigger('focus');
+        }
+        if (e.key === 'ArrowRight' && index < $cajas.length - 1) {
+            e.preventDefault();
+            $cajas.eq(index + 1).trigger('focus');
+        }
+
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            $btnVerificar.trigger('click');
+        }
+    });
+
+    $cajas.on('paste', function (e) {
+        e.preventDefault();
+        var texto = (e.originalEvent.clipboardData || window.clipboardData).getData('text');
+        texto = (texto || '').replace(/\D/g, '').slice(0, 6);
+        if (texto.length === 0) return;
+
+        $cajas.each(function (i) {
+            $(this).val(texto[i] || '');
+        });
+
+        var siguiente = Math.min(texto.length, 5);
+        $cajas.eq(siguiente).trigger('focus');
+    });
+
+    // ============================================================
+    //  AJAX con reCAPTCHA
+    // ============================================================
     function peticion(action, data, onSuccess, onError) {
-        var payload = $.extend({ action: action, nonce: NONCE }, data);
-        $.ajax({
-            url: API,
-            type: 'POST',
-            dataType: 'json',
-            data: payload,
-            success: function (resp) {
-                if (resp && resp.success) {
-                    onSuccess && onSuccess(resp.data);
-                } else {
-                    var msg = resp && resp.data && resp.data.message ? resp.data.message : 'Error inesperado';
+        // 1) Obtener token de reCAPTCHA
+        obtenerRecaptchaToken().always(function (recaptchaToken) {
+            var payload = $.extend(
+                { action: action, nonce: NONCE, recaptcha_token: recaptchaToken },
+                data
+            );
+
+            $.ajax({
+                url: API,
+                type: 'POST',
+                dataType: 'json',
+                data: payload,
+                success: function (resp) {
+                    if (resp && resp.success) {
+                        onSuccess && onSuccess(resp.data);
+                    } else {
+                        var msg = (resp && resp.data && resp.data.message)
+                            ? resp.data.message
+                            : 'Error inesperado';
+                        onError && onError({ message: msg });
+                    }
+                },
+                error: function (xhr) {
+                    var msg = 'Error de conexión';
+                    if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                        msg = xhr.responseJSON.data.message;
+                    }
                     onError && onError({ message: msg });
                 }
-            },
-            error: function (xhr) {
-                var msg = 'Error de conexión';
-                if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
-                    msg = xhr.responseJSON.data.message;
-                }
-                onError && onError({ message: msg });
-            }
+            });
         });
     }
 
-    // --------------------------------------------------
-    // Paso 1: buscar correo → enviar OTP automáticamente
-    // --------------------------------------------------
+    // ============================================================
+    //  Paso 1: Buscar correo → enviar OTP
+    // ============================================================
     $btnBuscar.on('click', function () {
         limpiarErrores();
         var correo = $.trim($correoInput.val());
 
         if (!correo) {
-            mostrarError($correoInput, $correoError, '⚠️ Por favor ingresa tu correo');
+            mostrarErrorCorreo('⚠️ Por favor ingresa tu correo');
             return;
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
-            mostrarError($correoInput, $correoError, '⚠️ Correo con formato inválido');
+            mostrarErrorCorreo('⚠️ Correo con formato inválido');
             return;
         }
 
@@ -166,15 +266,15 @@ jQuery(document).ready(function ($) {
                 $mensaje.addClass('show');
                 $step1.addClass('hidden');
                 $step2.removeClass('hidden');
-                $codigoInput.trigger('focus');
+                $('#otp-d1').trigger('focus');
                 iniciarTemporizador();
                 toggleSpinner($btnBuscar, $btnBuscarText, $btnBuscarSpinner, false);
             }, function (err) {
-                mostrarError($correoInput, $correoError, err.message);
+                mostrarErrorCorreo(err.message);
                 toggleSpinner($btnBuscar, $btnBuscarText, $btnBuscarSpinner, false);
             });
         }, function (err) {
-            mostrarError($correoInput, $correoError, err.message);
+            mostrarErrorCorreo(err.message);
             toggleSpinner($btnBuscar, $btnBuscarText, $btnBuscarSpinner, false);
         });
     });
@@ -186,57 +286,44 @@ jQuery(document).ready(function ($) {
         }
     });
 
-    // --------------------------------------------------
-    // Paso 2: verificar OTP
-    // --------------------------------------------------
+    // ============================================================
+    //  Paso 2: Verificar OTP
+    // ============================================================
     $btnVerificar.on('click', function () {
         if (otpExpirado) {
-            mostrarError($codigoInput, $codigoError, '⏰ El código ha expirado. Solicita uno nuevo.');
+            mostrarErrorOtp('⏰ El código ha expirado. Solicita uno nuevo.');
             return;
         }
 
         limpiarErrores();
-        var codigo = $.trim($codigoInput.val());
+        var codigo = obtenerCodigo();
 
-        if (!codigo) {
-            mostrarError($codigoInput, $codigoError, '⚠️ Por favor ingresa el código OTP');
-            return;
-        }
-        if (!/^\d{6}$/.test(codigo)) {
-            mostrarError($codigoInput, $codigoError, '⚠️ El código debe tener 6 dígitos numéricos');
+        if (codigo.length !== 6) {
+            mostrarErrorOtp('⚠️ Debes ingresar los 6 dígitos');
             return;
         }
 
         toggleSpinner($btnVerificar, $btnVerificarText, $btnVerificarSpinner, true);
 
         peticion('salud_verificar_otp', { email: currentEmail, otp: codigo }, function (data) {
-            detenerTemporizador();
-            $codigoInput.val('').css('border-color', '#4caf50');
+            if (timerInterval) clearInterval(timerInterval);
             $step2.addClass('hidden');
-            $timer.addClass('hidden');
             $success.text('🎉 ¡Verificación exitosa! Bienvenido ' + data.nombre).addClass('show');
             toggleSpinner($btnVerificar, $btnVerificarText, $btnVerificarSpinner, false);
 
             setTimeout(function () {
                 window.location.href = REDIRECT;
-            }, 1500);
+            }, 1200);
         }, function (err) {
-            mostrarError($codigoInput, $codigoError, err.message);
-            $codigoInput.val('').trigger('focus');
+            mostrarErrorOtp(err.message);
+            limpiarCajas();
             toggleSpinner($btnVerificar, $btnVerificarText, $btnVerificarSpinner, false);
         });
     });
 
-    $codigoInput.on('keypress', function (e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            $btnVerificar.trigger('click');
-        }
-    });
-
-    // --------------------------------------------------
-    // Reenviar OTP
-    // --------------------------------------------------
+    // ============================================================
+    //  Reenviar OTP
+    // ============================================================
     $reenviar.on('click', function () {
         if (!currentEmail) {
             alert('Error: No hay correo registrado');
@@ -249,8 +336,7 @@ jQuery(document).ready(function ($) {
             $reenviar.text('✅ Reenviado');
             iniciarTemporizador();
             limpiarErrores();
-            $codigoInput.val('').trigger('focus');
-            $btnVerificar.prop('disabled', false);
+            limpiarCajas();
             setTimeout(function () {
                 $reenviar.text(original).css('cursor', 'pointer');
             }, 3000);

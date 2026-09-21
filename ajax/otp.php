@@ -11,6 +11,24 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
 require_once plugin_dir_path(__DIR__) . 'includes/Database.php';
 require_once plugin_dir_path(__DIR__) . 'includes/Auth.php';
 require_once plugin_dir_path(__DIR__) . 'includes/OTP.php';
+require_once plugin_dir_path(__DIR__) . 'includes/Recaptcha.php';
+
+/**
+ * Valida reCAPTCHA. Si falla, corta la respuesta con error.
+ */
+function unisalud_validar_recaptcha_o_die()
+{
+    $token = isset($_POST['recaptcha_token']) ? sanitize_text_field(wp_unslash($_POST['recaptcha_token'])) : '';
+
+    if (!UsuariosSaludRecaptcha::validar($token)) {
+        error_log('[RECAPTCHA] validación fallida en ' . ($_POST['action'] ?? '?'));
+        wp_send_json_error([
+            'message' => 'No pudimos verificar que seas humano. Por favor intenta de nuevo.',
+            'code'    => 'RECAPTCHA_FAILED',
+        ], 403);
+        exit;
+    }
+}
 
 /**
  * Valida el nonce compartido
@@ -43,6 +61,7 @@ function ajax_salud_fresh_nonce()
 function ajax_salud_buscar_correos()
 {
     unisalud_consulta_check_nonce();
+    unisalud_validar_recaptcha_o_die();
 
     $correo = isset($_POST['correo']) ? sanitize_email(wp_unslash($_POST['correo'])) : '';
     if (empty($correo)) {
@@ -68,6 +87,7 @@ function ajax_salud_buscar_correos()
 function ajax_salud_enviar_otp()
 {
     unisalud_consulta_check_nonce();
+    unisalud_validar_recaptcha_o_die();
 
     $correo = isset($_POST['correo']) ? sanitize_email(wp_unslash($_POST['correo'])) : '';
     if (empty($correo)) {
@@ -130,6 +150,7 @@ function ajax_salud_verificar_otp()
 function ajax_salud_reenviar_otp()
 {
     unisalud_consulta_check_nonce();
+    unisalud_validar_recaptcha_o_die();
 
     $email = isset($_POST['email']) ? sanitize_email(wp_unslash($_POST['email'])) : '';
     if (empty($email)) {
@@ -190,3 +211,32 @@ function ajax_salud_debug_estado()
 
     wp_send_json_success($out);
 }
+
+/**
+ * Devuelve el tiempo restante real de la sesión.
+ * Se usa para sincronizar el timer del navegador con el servidor.
+ */
+function ajax_salud_session_status()
+{
+    $sesion = UsuariosSaludAuth::validarSesion();
+
+    if (!$sesion['valid']) {
+        wp_send_json_error(['code' => 'UNAUTHORIZED'], 401);
+        return;
+    }
+
+    $key      = UsuariosSaludAuth::SESSION_KEY;
+    $duracion = 2 * 60 * 60;
+
+    $creada   = isset($_SESSION[$key]['created_at'])
+        ? (int)$_SESSION[$key]['created_at']
+        : time();
+    $restante = max(0, $duracion - (time() - $creada));
+
+    wp_send_json_success([
+        'restante' => $restante,
+        'total'    => $duracion,
+    ]);
+}
+add_action('wp_ajax_nopriv_salud_session_status', 'ajax_salud_session_status');
+add_action('wp_ajax_salud_session_status',        'ajax_salud_session_status');

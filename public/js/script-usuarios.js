@@ -12,6 +12,9 @@ jQuery(document).ready(function ($) {
     var $btnDescargar = $('#btn-descargar');
     var $btnNuevaConsulta = $('#btn-nueva-consulta');
     var $btnSalirRes = $('#btn-salir-resultados');
+    var $historialLista = $('#ac-historial-lista');
+    var $historialPaginacion = $('#ac-historial-paginacion');
+    var historialPagina = 1;
 
     var timerSesion = null;
     var nonceActual = null;
@@ -97,19 +100,50 @@ jQuery(document).ready(function ($) {
     }
 
     // ============================================================
-    //  TIMER DE SESIÓN (visual, 2 horas)
+    //  TIMER DE SESIÓN — sincronizado con el servidor
     // ============================================================
+    var ultimaSync = Date.now();
+    var SESSION_START_KEY = 'unisalud_session_start';
+
     function iniciarTimerSesion() {
-        var segundos = 2 * 60 * 60;
+        // 1) Tiempo inicial: lo que diga el servidor (recomendado)
+        var restanteInicial = 0;
+        if (typeof usuarios_ajax.sesion_restante !== 'undefined' && usuarios_ajax.sesion_restante > 0) {
+            restanteInicial = parseInt(usuarios_ajax.sesion_restante, 10);
+        } else {
+            restanteInicial = 2 * 60 * 60; // fallback: 2 horas
+        }
+
+        var segundos = restanteInicial;
         actualizarTimer(segundos);
+
+        // 2) Guardar cuándo fue la última sincronización
+        var ultimaSync = Date.now();
+
         if (timerSesion) clearInterval(timerSesion);
         timerSesion = setInterval(function () {
             segundos--;
+
+            // 3) Cada 60s preguntar al servidor cuánto queda realmente
+            if (Date.now() - ultimaSync > 60000) {
+                ultimaSync = Date.now();
+                $.post(
+                    usuarios_ajax.ajax_url,
+                    { action: 'salud_session_status' }
+                ).done(function (resp) {
+                    if (resp && resp.success && resp.data && typeof resp.data.restante !== 'undefined') {
+                        segundos = parseInt(resp.data.restante, 10);
+                    }
+                });
+            }
+
+            // 4) Cuando llegue a 0, recargar (el servidor ya habrá matado la sesión)
             if (segundos <= 0) {
                 clearInterval(timerSesion);
                 window.location.reload();
                 return;
             }
+
             actualizarTimer(segundos);
         }, 1000);
     }
@@ -146,6 +180,8 @@ jQuery(document).ready(function ($) {
                 $vistaConsulta.hide();
                 $vistaResultados.show();
                 $btnConsultar.prop('disabled', false).text('CONSULTAR');
+                // ✅ Refrescar el historial en segundo plano
+                cargarHistorial(1);
             },
             function (err) {
                 $btnConsultar.prop('disabled', false).text('CONSULTAR');
@@ -213,6 +249,7 @@ jQuery(document).ready(function ($) {
         $('input[name="tipo_certificado"]').prop('checked', false);
         $('#certificado-genera').val('');
         $btnDescargar.prop('disabled', true);
+        cargarHistorial(1);
     }
 
     function cerrarSesion() {
@@ -263,11 +300,103 @@ jQuery(document).ready(function ($) {
     });
 
     // ============================================================
+    //  HISTORIAL DE CONSULTAS
+    // ============================================================
+    function cargarHistorial(pagina) {
+        pagina = pagina || 1;
+        historialPagina = pagina;
+
+        $historialLista.html('<div class="ac-historial-cargando">Cargando historial...</div>');
+
+        ajaxConNonce('salud_get_historial', { pagina: pagina }, function (data) {
+            renderHistorial(data);
+        }, function (err) {
+            $historialLista.html(
+                '<div class="ac-historial-vacio">No se pudo cargar el historial: ' +
+                escapeHtml(err.message || 'Error') + '</div>'
+            );
+            $historialPaginacion.hide();
+        });
+    }
+
+    function renderHistorial(data) {
+        var historial = data.historial || [];
+
+        if (historial.length === 0) {
+            $historialLista.html(
+                '<div class="ac-historial-vacio">Aún no has realizado ninguna consulta.</div>'
+            );
+            $historialPaginacion.hide();
+            return;
+        }
+
+        var html = '<div class="ac-historial-tabla-wrapper">';
+        html += '<table class="ac-historial-tabla">';
+        html += '<thead><tr>';
+        html += '<th>FECHA</th>';
+        html += '<th>IDENTIFICACIÓN</th>';
+        html += '<th>NOMBRE</th>';
+        html += '<th>TIPO</th>';
+        html += '</tr></thead><tbody>';
+
+        $.each(historial, function (i, h) {
+            var tipo = (h.tipo_afiliado || '—').toUpperCase();
+            var tipoClass = (tipo === 'BENEFICIARIO')
+                ? 'ac-historial-tipo-benef'
+                : 'ac-historial-tipo-cotiz';
+
+            html += '<tr>';
+            html += '<td>' + escapeHtml(h.fecha_formateada || '') + '</td>';
+            html += '<td>' + escapeHtml(h.identificacion_consultada || '') + '</td>';
+            html += '<td>' + escapeHtml(h.nombre_consultado || '—') + '</td>';
+            html += '<td><span class="ac-historial-tipo ' + tipoClass + '">' +
+                escapeHtml(tipo) + '</span></td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        $historialLista.html(html);
+
+        // Paginación
+        if (data.total_paginas > 1) {
+            var pag = '<div class="ac-historial-pag">';
+            pag += '<span class="ac-historial-total">Total: ' + data.total + ' consultas</span>';
+            pag += '<span class="ac-historial-botones">';
+
+            if (data.pagina > 1) {
+                pag += '<a href="#" class="ac-hist-page" data-page="' + (data.pagina - 1) + '">‹ Anterior</a>';
+            }
+
+            pag += '<span class="ac-hist-current">Página ' + data.pagina + ' de ' + data.total_paginas + '</span>';
+
+            if (data.pagina < data.total_paginas) {
+                pag += '<a href="#" class="ac-hist-page" data-page="' + (data.pagina + 1) + '">Siguiente ›</a>';
+            }
+
+            pag += '</span></div>';
+            $historialPaginacion.html(pag).show();
+        } else {
+            $historialPaginacion.hide();
+        }
+    }
+
+    // Delegado: click en paginación del historial
+    $(document).on('click', '.ac-hist-page', function (e) {
+        e.preventDefault();
+        var page = $(this).data('page');
+        if (page) {
+            cargarHistorial(page);
+            $('html, body').animate({ scrollTop: $('.ac-historial-wrapper').offset().top - 80 }, 300);
+        }
+    });
+
+    // ============================================================
     //  ARRANQUE
     // ============================================================
     // Pedir un nonce fresco al cargar (por si acaso) e iniciar timer.
     obtenerNonceFresco().always(function () {
         iniciarTimerSesion();
         $inputIdent.focus();
+        cargarHistorial(1);
     });
 });

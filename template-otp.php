@@ -5,16 +5,15 @@ if (!defined('ABSPATH')) {
 ?>
 <div class="usuarios-otp-container">
     <div class="otp-card">
-        <div class="otp-header">
-            <h2 class="otp-titulo">Acceso para Prestador</h2>
-            <p class="otp-subtitulo">Ingresa el correo electrónico para recibir un código de verificación y continuar con el acceso.</p>
-        </div>
-
         <!-- Paso 1: Correo -->
         <div id="otp-step1">
+            <h2 class="otp-titulo">Acceso para Prestador</h2>
+            <p class="otp-subtitulo">
+                Ingresa el correo electrónico para recibir un código de verificación y continuar con el acceso.
+            </p>
             <div class="otp-form-group">
-                <!-- <label for="otp-correo">Correo Electrónico</label> -->
-                <input type="email" id="otp-correo" placeholder="Ingresa el Correo electrónico" autocomplete="email">
+                <input type="email" id="otp-correo" class="otp-input-lineal"
+                    placeholder="Ingresa el Correo electrónico" autocomplete="email">
                 <div id="otp-correo-error" class="otp-error-msg">⚠️ Por favor ingresa un correo válido</div>
             </div>
             <button id="otp-btn-buscar" class="otp-btn">
@@ -30,29 +29,46 @@ if (!defined('ABSPATH')) {
             <span id="otp-correo-destino" class="otp-email-highlight">usuario@email.com</span>.
         </div>
 
-        <!-- Temporizador -->
-        <div id="otp-timer" class="otp-timer-container hidden">
-            <div class="otp-timer-label">⏱️ Tiempo restante</div>
-            <div class="otp-timer-value" id="otp-timer-value">2:00</div>
-            <div id="otp-timer-expirado" class="otp-timer-expired hidden">⏰ Código expirado</div>
-        </div>
-
         <!-- Paso 2: OTP -->
         <div id="otp-step2" class="hidden">
-            <div class="otp-form-group">
-                <label for="otp-codigo">Código OTP</label>
-                <input type="text" id="otp-codigo" placeholder="Ingresa el código de 6 dígitos" maxlength="6" autocomplete="off" inputmode="numeric">
-                <div id="otp-codigo-error" class="otp-error-msg">⚠️ Código incorrecto, intenta nuevamente</div>
+            <h2 class="otp-titulo">Acceso para Prestador</h2>
+            <p class="otp-subtitulo">
+                Ingrese el código de validación que fue enviado al correo para poder realizar la consulta de afiliación
+            </p>
+
+            <div class="otp-cajas-wrapper">
+                <input type="text" class="otp-caja" id="otp-d1" maxlength="1" inputmode="numeric" autocomplete="one-time-code">
+                <input type="text" class="otp-caja" id="otp-d2" maxlength="1" inputmode="numeric">
+                <input type="text" class="otp-caja" id="otp-d3" maxlength="1" inputmode="numeric">
+                <input type="text" class="otp-caja" id="otp-d4" maxlength="1" inputmode="numeric">
+                <input type="text" class="otp-caja" id="otp-d5" maxlength="1" inputmode="numeric">
+                <input type="text" class="otp-caja" id="otp-d6" maxlength="1" inputmode="numeric">
             </div>
-            <button id="otp-btn-verificar" class="otp-btn otp-btn-secondary">
-                <span id="otp-btn-verificar-text">Verificar</span>
+
+            <div id="otp-codigo-error" class="otp-error-msg">⚠️ Código incorrecto, intenta nuevamente</div>
+
+            <!-- Timer + Reenviar -->
+            <div class="otp-timer-linea">
+                <span id="otp-timer-value">02:00</span>
+                <span id="otp-reenviar" class="otp-reenviar-link">Reenviar código</span>
+            </div>
+
+            <button id="otp-btn-verificar" class="otp-btn">
+                <span id="otp-btn-verificar-text">ENTRAR</span>
                 <span id="otp-btn-verificar-spinner" class="otp-spinner hidden"></span>
             </button>
-            <div class="otp-hint">
-                ¿No recibiste el código? <span id="otp-reenviar">Reenviar</span>
-            </div>
         </div>
 
         <div id="otp-success" class="otp-success-msg">🎉 ¡Verificación exitosa!</div>
+
+        <!-- ✅ TEXTO LEGAL DE reCAPTCHA (obligatorio por Google) -->
+        <p class="otp-legal">
+            Este sitio está protegido por reCAPTCHA.
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacidad</a> y
+            <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Términos</a> de Google.
+        </p>
     </div>
 </div>
+
+<!-- ✅ Script de reCAPTCHA v3 (invisible) -->
+<script src="https://www.google.com/recaptcha/api.js?render=<?php echo esc_attr(UsuariosSaludRecaptcha::SITE_KEY); ?>" async defer></script>

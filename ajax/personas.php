@@ -4,18 +4,17 @@ if (!defined('ABSPATH')) {
 }
 
 require_once plugin_dir_path(__DIR__) . 'includes/Auth.php';
+require_once plugin_dir_path(__DIR__) . 'includes/Historial.php';
 
 /**
  * Lista de personas filtradas. Requiere sesión activa.
  */
 function ajax_get_unisalud_consulta()
 {
-    // Validar nonce
     if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'unisalud_consulta_nonce')) {
         wp_send_json_error(['message' => 'Error de seguridad', 'code' => 'BAD_NONCE'], 403);
     }
 
-    // Requerir sesión
     UsuariosSaludAuth::requerirSesionAjax();
 
     $nombre  = isset($_POST['nombre']) ? sanitize_text_field(wp_unslash($_POST['nombre'])) : '';
@@ -46,8 +45,6 @@ function ajax_get_unisalud_consulta()
         'total_paginas' => $total_pags,
     ]);
 }
-add_action('wp_ajax_nopriv_get_unisalud_consulta', 'ajax_get_unisalud_consulta');
-add_action('wp_ajax_get_unisalud_consulta',        'ajax_get_unisalud_consulta');
 
 /**
  * Detalle de persona. Requiere sesión activa.
@@ -84,66 +81,120 @@ function ajax_get_persona_detalle_salud()
 
     wp_send_json_success($detalle);
 }
-add_action('wp_ajax_nopriv_get_persona_detalle_salud', 'ajax_get_persona_detalle_salud');
-add_action('wp_ajax_get_persona_detalle_salud',        'ajax_get_persona_detalle_salud');
 
 /**
  * Consulta una persona por número de identificación exacto.
- * Requiere sesión activa.
+ * Devuelve el cotizante + sus beneficiarios.
+ * Guarda la consulta en el historial del usuario activo.
  */
 function ajax_salud_consultar_por_identificacion()
 {
-    error_log('[CONSULTA] INICIO. POST=' . print_r($_POST, true));
-    error_log('[CONSULTA] session_id=' . session_id());
-    error_log('[CONSULTA] user_id=' . get_current_user_id());
-    error_log('[CONSULTA] session_token=' . wp_get_session_token());
+    error_log('[CONSULTA] ===== INICIO =====');
 
-    if (!isset($_POST['nonce'])) {
-        error_log('[CONSULTA] nonce NO ENVIADO');
+    // 1) Validar nonce
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'usuarios_salud_nonce')) {
+        error_log('[CONSULTA] nonce inválido');
         wp_send_json_error(['message' => 'Error de seguridad', 'code' => 'BAD_NONCE'], 403);
         return;
     }
 
-    $nonce_recibido = sanitize_text_field(wp_unslash($_POST['nonce']));
-    $verificacion   = wp_verify_nonce($nonce_recibido, 'usuarios_salud_nonce');
+    // 2) Requerir sesión y obtener usuario
+    $usuario = UsuariosSaludAuth::requerirSesionAjax();
+    error_log('[CONSULTA] usuario=' . print_r($usuario, true));
 
-    error_log('[CONSULTA] nonce_recibido=' . $nonce_recibido);
-    error_log('[CONSULTA] wp_verify_nonce devuelve=' . var_export($verificacion, true));
+    // 3) Validar identificación
+    $identificacion = isset($_POST['identificacion'])
+        ? sanitize_text_field(wp_unslash($_POST['identificacion']))
+        : '';
 
-    if (!$verificacion) {
-        error_log('[CONSULTA] NONCE INVALIDO');
-        wp_send_json_error(['message' => 'Error de seguridad', 'code' => 'BAD_NONCE'], 403);
-        return;
-    }
-
-    error_log('[CONSULTA] nonce OK, continuando...');
-
-    UsuariosSaludAuth::requerirSesionAjax();
-
-    $identificacion = isset($_POST['identificacion']) ? sanitize_text_field(wp_unslash($_POST['identificacion'])) : '';
     if ($identificacion === '') {
         wp_send_json_error(['message' => 'Debes ingresar un número de identificación']);
+        return;
     }
 
+    // 4) Cargar consultas
     $consultas_path = plugin_dir_path(__DIR__) . 'consultas.php';
     if (!file_exists($consultas_path)) {
-        wp_send_json_error('Archivo consultas.php no encontrado');
+        wp_send_json_error(['message' => 'Archivo consultas.php no encontrado']);
+        return;
     }
     require_once $consultas_path;
 
     if (!class_exists('UsuariosSaludConsultas')) {
-        wp_send_json_error('Clase UsuariosSaludConsultas no encontrada');
+        wp_send_json_error(['message' => 'Clase UsuariosSaludConsultas no encontrada']);
+        return;
     }
 
+    // 5) Ejecutar consulta
     $obj   = new UsuariosSaludConsultas();
     $datos = $obj->getPersonaPorIdentificacion($identificacion);
 
-    if ($datos === null) {
+    if ($datos === null || empty($datos)) {
         wp_send_json_error(['message' => 'No se encontró un afiliado con ese número de identificación']);
+        return;
     }
 
-    error_log('[CONSULTA] OK, enviando respuesta');
+    // 6) Guardar en historial ANTES de wp_send_json_success
+    if (!empty($usuario['id'])) {
+        $primer = $datos[0] ?? null;
+
+        error_log('[CONSULTA] Guardando historial: usuario_id=' . $usuario['id']
+            . ' email=' . ($usuario['email'] ?? '')
+            . ' identificacion=' . $identificacion);
+
+        $guardado = UsuariosSaludHistorial::guardar(
+            (int)$usuario['id'],
+            (string)($usuario['email'] ?? ''),
+            $identificacion,
+            $primer ? (string)($primer['nombre_completo'] ?? '') : '',
+            $primer ? (string)($primer['tipo_afiliado']   ?? '') : '',
+            ($primer && strtoupper($primer['tipo_afiliado'] ?? '') === 'BENEFICIARIO') ? 1 : 0
+        );
+
+        error_log('[CONSULTA] Resultado del guardado: ' . var_export($guardado, true));
+    } else {
+        error_log('[CONSULTA] ⚠️ usuario_id vacío, NO se guarda');
+    }
+
+    // 7) Responder
     wp_send_json_success($datos);
 }
-add_action('wp_ajax_nopriv_salud_consultar_por_identificacion', 'ajax_salud_consultar_por_identificacion');
-add_action('wp_ajax_salud_consultar_por_identificacion',        'ajax_salud_consultar_por_identificacion');
+
+/**
+ * Devuelve el historial de consultas del usuario actual.
+ */
+function ajax_salud_get_historial()
+{
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'usuarios_salud_nonce')) {
+        wp_send_json_error(['message' => 'Error de seguridad', 'code' => 'BAD_NONCE'], 403);
+    }
+
+    $usuario = UsuariosSaludAuth::requerirSesionAjax();
+
+    $pagina     = isset($_POST['pagina']) ? max(1, intval($_POST['pagina'])) : 1;
+    $porPagina  = 10;
+    $offset     = ($pagina - 1) * $porPagina;
+
+    $historial = UsuariosSaludHistorial::obtenerPorUsuario($usuario['id'], $porPagina, $offset);
+    $total     = UsuariosSaludHistorial::contarPorUsuario($usuario['id']);
+
+    foreach ($historial as &$row) {
+        if (!empty($row['fecha_consulta'])) {
+            $ts = strtotime($row['fecha_consulta']);
+            $row['fecha_formateada'] = date('d/m/Y H:i', $ts);
+        } else {
+            $row['fecha_formateada'] = '';
+        }
+        $row['tipo_afiliado'] = strtoupper($row['tipo_afiliado'] ?? '');
+    }
+    unset($row);
+
+    wp_send_json_success([
+        'historial'     => $historial,
+        'total'         => $total,
+        'pagina'        => $pagina,
+        'total_paginas' => ($total > 0) ? (int)ceil($total / $porPagina) : 1,
+    ]);
+}
+
+// ⚠️ NO añadir add_action aquí. Se registran en shortcode.php

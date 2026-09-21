@@ -8,6 +8,8 @@ require_once __DIR__ . '/includes/Database.php';
 require_once __DIR__ . '/includes/Auth.php';
 require_once __DIR__ . '/includes/OTP.php';
 require_once __DIR__ . '/includes/Mailer.php';
+require_once __DIR__ . '/includes/Historial.php';
+require_once __DIR__ . '/includes/Recaptcha.php';
 
 /**
  * Iniciar sesión PHP lo antes posible
@@ -46,10 +48,23 @@ function unisalud_consulta_enqueue_scripts()
             $version,
             true
         );
+
+        // ------------------------------------------------------------
+        // Calcular el tiempo real restante de la sesión
+        // ------------------------------------------------------------
+        $key      = UsuariosSaludAuth::SESSION_KEY;
+        $duracion = 2 * 60 * 60;
+        $creada   = isset($_SESSION[$key]['created_at'])
+            ? (int)$_SESSION[$key]['created_at']
+            : time();
+        $restante = max(0, $duracion - (time() - $creada));
+
         wp_localize_script('usuarios-salud-js', 'usuarios_ajax', [
-            'ajax_url'   => admin_url('admin-ajax.php'),
-            'nonce'      => wp_create_nonce('unisalud_consulta_nonce'),
-            'plugin_url' => $base_url,
+            'ajax_url'        => admin_url('admin-ajax.php'),
+            'nonce'           => wp_create_nonce('unisalud_consulta_nonce'),
+            'plugin_url'      => $base_url,
+            'sesion_restante' => $restante,
+            'sesion_total'    => $duracion,
         ]);
     } else {
         wp_enqueue_style(
@@ -66,9 +81,11 @@ function unisalud_consulta_enqueue_scripts()
             true
         );
         wp_localize_script('usuarios-salud-otp-js', 'usuarios_otp_ajax', [
-            'ajax_url'   => admin_url('admin-ajax.php'),
-            'nonce'      => wp_create_nonce('unisalud_consulta_nonce'),
-            'redirect'   => get_permalink(),
+            'ajax_url'           => admin_url('admin-ajax.php'),
+            'nonce'              => wp_create_nonce('unisalud_consulta_nonce'),
+            'redirect'           => get_permalink(),
+            'recaptcha_site_key' => UsuariosSaludRecaptcha::SITE_KEY,
+            'recaptcha_action'   => UsuariosSaludRecaptcha::ACTION,
         ]);
     }
 }
@@ -140,12 +157,19 @@ add_action('init', function () {
     add_action('wp_ajax_nopriv_salud_debug_estado', 'ajax_salud_debug_estado');
     add_action('wp_ajax_salud_debug_estado',        'ajax_salud_debug_estado');
 
+    // ==== Session status (sync timer) ====
+    add_action('wp_ajax_nopriv_salud_session_status', 'ajax_salud_session_status');
+    add_action('wp_ajax_salud_session_status',        'ajax_salud_session_status');
+
     // ==== Personas ====
-    add_action('wp_ajax_nopriv_get_unisalud_consulta',        'ajax_get_unisalud_consulta');
-    add_action('wp_ajax_get_unisalud_consulta',               'ajax_get_unisalud_consulta');
+    add_action('wp_ajax_nopriv_get_unisalud_consulta',    'ajax_get_unisalud_consulta');
+    add_action('wp_ajax_get_unisalud_consulta',           'ajax_get_unisalud_consulta');
     add_action('wp_ajax_nopriv_get_persona_detalle_salud', 'ajax_get_persona_detalle_salud');
-    add_action('wp_ajax_get_persona_detalle_salud',        'ajax_get_persona_detalle_salud');
+    add_action('wp_ajax_get_persona_detalle_salud',       'ajax_get_persona_detalle_salud');
 
     add_action('wp_ajax_nopriv_salud_consultar_por_identificacion', 'ajax_salud_consultar_por_identificacion');
     add_action('wp_ajax_salud_consultar_por_identificacion',        'ajax_salud_consultar_por_identificacion');
+
+    add_action('wp_ajax_nopriv_salud_get_historial', 'ajax_salud_get_historial');
+    add_action('wp_ajax_salud_get_historial',        'ajax_salud_get_historial');
 }, 5);

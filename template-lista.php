@@ -1,5 +1,7 @@
 <?php
-if (!defined('ABSPATH')) { exit; }
+if (!defined('ABSPATH')) {
+    exit;
+}
 
 $nombre_sesion = isset($usuario_salud['nombre']) ? $usuario_salud['nombre'] : '';
 ?>
@@ -26,6 +28,18 @@ $nombre_sesion = isset($usuario_salud['nombre']) ? $usuario_salud['nombre'] : ''
             </div>
             <button type="button" id="btn-consultar" class="ac-btn ac-btn-primary">CONSULTAR</button>
             <button type="button" id="btn-salir-consulta" class="ac-btn ac-btn-outline">SALIR</button>
+        </div>
+
+        <!-- Sección de historial de consultas -->
+        <div class="ac-historial-wrapper">
+            <h3 class="ac-historial-titulo">📋 Historial de consultas</h3>
+            <p class="ac-historial-subtitulo">Últimas consultas realizadas por tu usuario</p>
+
+            <div id="ac-historial-lista">
+                <div class="ac-historial-cargando">Cargando historial...</div>
+            </div>
+
+            <div id="ac-historial-paginacion" class="ac-historial-paginacion" style="display:none;"></div>
         </div>
     </div>
 
