@@ -172,4 +172,7 @@ add_action('init', function () {
 
     add_action('wp_ajax_nopriv_salud_get_historial', 'ajax_salud_get_historial');
     add_action('wp_ajax_salud_get_historial',        'ajax_salud_get_historial');
+
+    add_action('wp_ajax_nopriv_salud_generar_pdf_singular', 'ajax_salud_generar_pdf_singular');
+    add_action('wp_ajax_salud_generar_pdf_singular',        'ajax_salud_generar_pdf_singular');
 }, 5);

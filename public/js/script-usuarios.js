@@ -337,6 +337,7 @@ jQuery(document).ready(function ($) {
         html += '<th>IDENTIFICACIÓN</th>';
         html += '<th>NOMBRE</th>';
         html += '<th>TIPO</th>';
+        html += '<th>ACCIONES</th>';
         html += '</tr></thead><tbody>';
 
         $.each(historial, function (i, h) {
@@ -351,6 +352,8 @@ jQuery(document).ready(function ($) {
             html += '<td>' + escapeHtml(h.nombre_consultado || '—') + '</td>';
             html += '<td><span class="ac-historial-tipo ' + tipoClass + '">' +
                 escapeHtml(tipo) + '</span></td>';
+            html += `<td><button class="ac-btn-detalle" data-identificacion="${escapeHtml(h.identificacion_consultada || '')}" >Detalle</button>
+            <button class="ac-btn-descargarpdf" data-identificacion="${escapeHtml(h.identificacion_consultada || '')}">Pdf</button></td>`;
             html += '</tr>';
         });
 
@@ -399,4 +402,71 @@ jQuery(document).ready(function ($) {
         $inputIdent.focus();
         cargarHistorial(1);
     });
+
+
+    //boton detalle
+    $('#ac-historial-lista').on('click', '.ac-btn-detalle', function (e) {
+        e.preventDefault();
+        var identificacion = $(this).data('identificacion');
+        console.log(identificacion);
+
+        identificacion = $.trim(identificacion);
+
+        ajaxConNonce(
+            'salud_consultar_por_identificacion',
+            { identificacion: identificacion },
+            function (data) {
+                renderResultado(data);
+                $vistaConsulta.hide();
+                $vistaResultados.show();
+                $btnConsultar.prop('disabled', false).text('CONSULTAR');
+                // ✅ Refrescar el historial en segundo plano
+                cargarHistorial(1);
+            },
+            function (err) {
+                $btnConsultar.prop('disabled', false).text('CONSULTAR');
+                alert(err.message || 'No se encontró el afiliado');
+            }
+        );
+
+    });
+
+
+    //boton descarga pdf
+    $('#ac-historial-lista').on('click', '.ac-btn-descargarpdf', function (e) {
+        e.preventDefault();
+        var identificacion = $(this).data('identificacion');
+        console.log(identificacion);
+
+        identificacion = $.trim(identificacion);
+
+        ajaxConNonce(
+            'salud_generar_pdf_singular',
+            { identificacion: identificacion },
+            function (data) {
+                console.log("data: ",data)
+                var byteChars = atob(data.pdf);
+                var byteNumbers = new Array(byteChars.length);
+                for (var i = 0; i < byteChars.length; i++) {
+                    byteNumbers[i] = byteChars.charCodeAt(i);
+                }
+                var byteArray = new Uint8Array(byteNumbers);
+                var blob = new Blob([byteArray], { type: 'application/pdf' });
+
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = data.filename || 'certificado.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            },
+            function (err) {
+                $btnConsultar.prop('disabled', false).text('CONSULTAR');
+                alert(err.message || 'No se encontró el afiliado');
+            }
+        );
+    });
+
 });

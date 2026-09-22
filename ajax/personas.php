@@ -197,4 +197,80 @@ function ajax_salud_get_historial()
     ]);
 }
 
+/**
+ * Genera el PDF del certificado de afiliación.
+ * Reutiliza UsuariosSaludConsultas::getPersonaPorIdentificacion()
+ * (la misma que usa ajax_salud_consultar_por_identificacion).
+ */
+function ajax_salud_generar_pdf_singular()
+{    
+    UsuariosSaludAuth::requerirSesionAjax();
+    
+    $identificacion   = isset($_POST['identificacion'])
+        ? sanitize_text_field(wp_unslash($_POST['identificacion']))
+        : '';
+    $tipo_certificado = isset($_POST['tipo_certificado'])
+        ? sanitize_text_field(wp_unslash($_POST['tipo_certificado']))
+        : 'INDIVIDUAL';
+    $dirigido         = isset($_POST['dirigido'])
+        ? sanitize_text_field(wp_unslash($_POST['dirigido']))
+        : '';
+
+    if ($identificacion === '') {
+        wp_send_json_error(['message' => 'Identificación requerida']);
+        return;
+    }
+    
+    $consultas_path = plugin_dir_path(__DIR__) . 'consultas.php';
+    if (!file_exists($consultas_path)) {
+        wp_send_json_error(['message' => 'consultas.php no encontrado']);
+        return;
+    }
+    require_once $consultas_path;
+
+    if (!class_exists('UsuariosSaludConsultas')) {
+        wp_send_json_error(['message' => 'Clase UsuariosSaludConsultas no encontrada']);
+        return;
+    }
+    
+    $obj      = new UsuariosSaludConsultas();
+    $personas = $obj->getPersonaPorIdentificacion($identificacion);
+
+    if (empty($personas)) {
+        wp_send_json_error(['message' => 'No se encontró un afiliado con esa identificación']);
+        return;
+    }
+    
+    if (strtoupper($tipo_certificado) === 'INDIVIDUAL') {
+        $personas = [$personas[0]];
+    }
+    
+    $html = UsuariosSaludAuth::salud_render_certificado_html(
+        $personas,
+        $tipo_certificado,
+        $dirigido
+    );
+    
+    $autoload = dirname(__DIR__, 1) . '/vendor/autoload.php';
+    if (!file_exists($autoload)) {
+        wp_send_json_error(['message' => 'Dompdf no instalado. Falta: ' . $autoload]);
+        return;
+    }
+    require_once $autoload;
+
+    $dompdf = new \Dompdf\Dompdf([
+        'isRemoteEnabled'      => true,
+        'isHtml5ParserEnabled' => true,
+        'defaultFont'          => 'DejaVu Sans',
+    ]);
+    $dompdf->loadHtml($html, 'UTF-8');
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->render();
+    
+    wp_send_json_success([
+        'filename' => 'certificado_' . $identificacion . '_' . strtolower($tipo_certificado) . '.pdf',
+        'pdf'      => base64_encode($dompdf->output()),
+    ]);
+}
+
 // ⚠️ NO añadir add_action aquí. Se registran en shortcode.php

@@ -6,8 +6,8 @@ if (!defined('ABSPATH')) {
 class UsuariosSaludRecaptcha
 {
     // 🔑 Claves de tu reCAPTCHA v3
-    const SITE_KEY   = '6LfF7SkpAAAAAKRgo3UyDq6WOaCz12KYsCA6rzQT';
-    const SECRET_KEY = '6LfF7SkpAAAAAN_7gc_YVPdmMr0UANpg1hNSWPh0';
+    const SITE_KEY   = '6LdgVMktAAAAADsdAZ0mz6DgYHj-hVaDq5lMzY5v';
+    const SECRET_KEY = '6LdgVMktAAAAAOqP9bWQRy0Zh6ZtqJ9Be5rGpuny';
 
     // 🎯 Umbral mínimo de score (0.0 = bot, 1.0 = humano)
     // 0.5 es el estándar. Bájalo a 0.3 si rechaza usuarios legítimos.
