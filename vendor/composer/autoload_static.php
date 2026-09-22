@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit33cad13092641f81b77ea1ff6e1ca5db
+class ComposerStaticInit13c2ea380f6f598f89b9cfcbd5fd6457
 {
     public static $files = array (
         '0174385c3be07e86008907d06ee66531' => __DIR__ . '/..' . '/sabberworm/php-css-parser/src/Rule/Rule.php',
@@ -62,9 +62,9 @@ class ComposerStaticInit33cad13092641f81b77ea1ff6e1ca5db
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInit33cad13092641f81b77ea1ff6e1ca5db::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInit33cad13092641f81b77ea1ff6e1ca5db::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInit33cad13092641f81b77ea1ff6e1ca5db::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInit13c2ea380f6f598f89b9cfcbd5fd6457::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInit13c2ea380f6f598f89b9cfcbd5fd6457::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInit13c2ea380f6f598f89b9cfcbd5fd6457::$classMap;
 
         }, null, ClassLoader::class);
     }
