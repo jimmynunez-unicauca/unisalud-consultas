@@ -35,7 +35,7 @@ class UsuariosSaludPDF
             $options = new Options();
             $options->set('isRemoteEnabled', true);      // para cargar el logo por URL
             $options->set('isHtml5ParserEnabled', true);
-            $options->set('defaultFont', 'Helvetica');
+            $options->set('defaultFont', 'Open Sans');
             $options->set('chroot', ABSPATH);            // permitir imágenes locales
 
             $dompdf = new Dompdf($options);
@@ -61,14 +61,15 @@ class UsuariosSaludPDF
     {
         // Variables disponibles en la plantilla
         $datos = [
-            'persona'          => $persona,
-            'beneficiarios'    => $beneficiarios,
-            'tipo_certificado' => $tipoCertificado,
-            'genera_para'      => $generaPara,
-            'fecha_expedicion' => self::fechaEnEspanol(),
-            'ciudad'           => 'Popayán',
-            'logo_url'         => self::urlLogo(),
-            'codigo_verif'     => self::codigoVerificacion($persona),
+            'persona'                => $persona,
+            'beneficiarios'          => $beneficiarios,
+            'tipo_certificado'       => $tipoCertificado,
+            'genera_para'            => $generaPara,
+            'fecha_expedicion'       => self::fechaEnEspanol(),
+            'fecha_expedicion_larga' => self::fechaLargaEnEspanol(),
+            'ciudad'                 => 'Popayán',
+            'logo_url'               => self::urlLogo(),
+            'codigo_verif'           => self::codigoVerificacion($persona),
         ];
 
         // Extraer para que estén accesibles en la plantilla
@@ -120,5 +121,29 @@ class UsuariosSaludPDF
     {
         $base = ($persona['numerodocumento'] ?? '') . '|' . date('Ymd') . '|' . wp_salt('auth');
         return strtoupper(substr(md5($base), 0, 12));
+    }
+
+    /**
+     * Fecha en formato "24 de August de 2026" (como en el ejemplo).
+     * Usa el nombre del mes en inglés para mantener el formato original.
+     */
+    private static function fechaLargaEnEspanol()
+    {
+        $meses = [
+            1 => 'January',
+            2 => 'February',
+            3 => 'March',
+            4 => 'April',
+            5 => 'May',
+            6 => 'June',
+            7 => 'July',
+            8 => 'August',
+            9 => 'September',
+            10 => 'October',
+            11 => 'November',
+            12 => 'December',
+        ];
+        $mes = $meses[(int)date('n')] ?? date('F');
+        return date('d') . ' de ' . $mes . ' de ' . date('Y');
     }
 }
