@@ -1,6 +1,87 @@
 jQuery(document).ready(function ($) {
 
     // ============================================================
+    //  FALLBACK si SweetAlert2 no carga (defensivo)
+    // ============================================================
+    if (typeof Swal === 'undefined') {
+        console.warn('[SWAL] SweetAlert2 no disponible, usando fallback nativo');
+        window.Swal = {
+            fire: function (opts) {
+                var msg = (opts && (opts.text || opts.title)) || '';
+                if (opts && opts.showCancelButton) {
+                    var ok = confirm(msg);
+                    return Promise.resolve({
+                        isConfirmed: ok,
+                        isDismissed: !ok,
+                        dismiss: ok ? 'confirm' : 'cancel'
+                    });
+                }
+                alert(msg);
+                return Promise.resolve({ isConfirmed: true, isDismissed: false, dismiss: 'confirm' });
+            },
+            close: function () { },
+            showLoading: function () { },
+            isVisible: function () { return false; },
+            DismissReason: { cancel: 'cancel', backdrop: 'backdrop', esc: 'esc' }
+        };
+    }
+
+    // ============================================================
+    //  SWEETALERT2 — HELPERS
+    // ============================================================
+    var SWAL_COLOR = '#1a1a6e';
+
+    function swalExito(titulo, mensaje) {
+        return Swal.fire({
+            title: titulo || '¡Listo!',
+            text: mensaje || '',
+            icon: 'success',
+            confirmButtonColor: SWAL_COLOR,
+            confirmButtonText: 'Aceptar',
+            timer: 3000,
+            timerProgressBar: true,
+        });
+    }
+
+    function swalError(titulo, mensaje) {
+        return Swal.fire({
+            title: titulo || 'Ups...',
+            text: mensaje || '',
+            icon: 'error',
+            confirmButtonColor: SWAL_COLOR,
+            confirmButtonText: 'Entendido',
+        });
+    }
+
+    function swalAdvertencia(titulo, mensaje) {
+        return Swal.fire({
+            title: titulo || 'Atención',
+            text: mensaje || '',
+            icon: 'warning',
+            confirmButtonColor: SWAL_COLOR,
+            confirmButtonText: 'Entendido',
+        });
+    }
+
+    function swalCargando(titulo) {
+        return Swal.fire({
+            title: titulo || 'Procesando...',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: function () {
+                Swal.showLoading();
+            }
+        });
+    }
+
+    function swalCerrar() {
+        if (typeof Swal !== 'undefined' && Swal.isVisible()) {
+            Swal.close();
+        }
+    }
+
+    // ============================================================
     //  REFERENCIAS
     // ============================================================
     var $vistaConsulta = $('#vista-consulta');
@@ -29,13 +110,8 @@ jQuery(document).ready(function ($) {
         return div.innerHTML;
     }
 
-    /**
-     * Obtiene un nonce FRESCO del servidor.
-     * Nunca usamos el nonce del HTML porque puede estar caducado.
-     */
     function obtenerNonceFresco() {
         var deferred = $.Deferred();
-
         $.post(
             usuarios_ajax.ajax_url,
             { action: 'salud_fresh_nonce' }
@@ -44,34 +120,35 @@ jQuery(document).ready(function ($) {
                 nonceActual = resp.data.nonce;
                 deferred.resolve(nonceActual);
             } else {
-                // Fallback al que teníamos
                 deferred.resolve(nonceActual);
             }
         }).fail(function () {
-            // Fallback al que teníamos
             deferred.resolve(nonceActual);
         });
-
         return deferred.promise();
     }
 
-    /**
-     * Hace una petición AJAX garantizando nonce fresco.
-     *   - Pide un nonce nuevo
-     *   - Envía la petición con ese nonce
-     */
     function ajaxConNonce(action, data, onSuccess, onError) {
         obtenerNonceFresco().always(function (nonce) {
             var payload = $.extend(
                 { action: action, nonce: nonce },
                 data || {}
             );
+
+            // Timeout global para evitar que el loader se quede pegado
+            var timeoutId = setTimeout(function () {
+                swalCerrar();
+                if (onError) onError({ message: 'La operación tardó demasiado. Intenta de nuevo.' });
+            }, 60000);
+
             $.ajax({
                 url: usuarios_ajax.ajax_url,
                 type: 'POST',
                 dataType: 'json',
                 data: payload,
+                timeout: 55000,
                 success: function (resp) {
+                    clearTimeout(timeoutId);
                     if (resp && resp.success) {
                         if (onSuccess) onSuccess(resp.data);
                     } else {
@@ -84,15 +161,24 @@ jQuery(document).ready(function ($) {
                         });
                     }
                 },
-                error: function (xhr) {
+                error: function (xhr, status) {
+                    clearTimeout(timeoutId);
+
                     if (xhr && xhr.status === 401) {
                         window.location.reload();
                         return;
                     }
+
                     var msg = 'Error de conexión';
-                    if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                    if (status === 'timeout') {
+                        msg = 'El servidor tardó demasiado en responder.';
+                    } else if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
                         msg = xhr.responseJSON.data.message;
+                    } else if (xhr && xhr.responseText) {
+                        console.error('Respuesta del servidor:', xhr.responseText.substring(0, 500));
+                        msg = 'Error del servidor. Revisa la consola.';
                     }
+
                     if (onError) onError({ message: msg });
                 }
             });
@@ -100,31 +186,25 @@ jQuery(document).ready(function ($) {
     }
 
     // ============================================================
-    //  TIMER DE SESIÓN — sincronizado con el servidor
+    //  TIMER DE SESIÓN
     // ============================================================
-    var ultimaSync = Date.now();
-    var SESSION_START_KEY = 'unisalud_session_start';
-
     function iniciarTimerSesion() {
-        // 1) Tiempo inicial: lo que diga el servidor (recomendado)
         var restanteInicial = 0;
         if (typeof usuarios_ajax.sesion_restante !== 'undefined' && usuarios_ajax.sesion_restante > 0) {
             restanteInicial = parseInt(usuarios_ajax.sesion_restante, 10);
         } else {
-            restanteInicial = 2 * 60 * 60; // fallback: 2 horas
+            restanteInicial = 2 * 60 * 60;
         }
 
         var segundos = restanteInicial;
         actualizarTimer(segundos);
 
-        // 2) Guardar cuándo fue la última sincronización
         var ultimaSync = Date.now();
 
         if (timerSesion) clearInterval(timerSesion);
         timerSesion = setInterval(function () {
             segundos--;
 
-            // 3) Cada 60s preguntar al servidor cuánto queda realmente
             if (Date.now() - ultimaSync > 60000) {
                 ultimaSync = Date.now();
                 $.post(
@@ -137,10 +217,12 @@ jQuery(document).ready(function ($) {
                 });
             }
 
-            // 4) Cuando llegue a 0, recargar (el servidor ya habrá matado la sesión)
             if (segundos <= 0) {
                 clearInterval(timerSesion);
-                window.location.reload();
+                swalAdvertencia('Sesión expirada', 'Tu sesión ha expirado. Serás redirigido al inicio de sesión.')
+                    .then(function () {
+                        window.location.reload();
+                    });
                 return;
             }
 
@@ -161,37 +243,40 @@ jQuery(document).ready(function ($) {
     // ============================================================
     //  CONSULTA POR IDENTIFICACIÓN
     // ============================================================
-    function realizarConsulta() {
-        var identificacion = $.trim($inputIdent.val());
+    function realizarConsulta(identificacionOverride) {
+        var identificacion = identificacionOverride || $.trim($inputIdent.val());
 
         if (identificacion === '') {
             $inputIdent.addClass('ac-input-error').focus();
+            swalAdvertencia('Campo vacío', 'Por favor ingresa un número de identificación.');
             return;
         }
 
-        $inputIdent.removeClass('ac-input-error');
+        $inputIdent.removeClass('ac-input-error').val(identificacion);
         $btnConsultar.prop('disabled', true).text('Consultando...');
+
+        swalCargando('Consultando afiliado...');
 
         ajaxConNonce(
             'salud_consultar_por_identificacion',
             { identificacion: identificacion },
             function (data) {
+                swalCerrar();
                 renderResultado(data);
                 $vistaConsulta.hide();
                 $vistaResultados.show();
                 $btnConsultar.prop('disabled', false).text('CONSULTAR');
-                // ✅ Refrescar el historial en segundo plano
                 cargarHistorial(1);
             },
             function (err) {
+                swalCerrar();
                 $btnConsultar.prop('disabled', false).text('CONSULTAR');
-                alert(err.message || 'No se encontró el afiliado');
+                swalError('No encontrado', err.message || 'No se encontró el afiliado con ese número de identificación.');
             }
         );
     }
 
     function renderResultado(personas) {
-        // Acepta tanto un array (cotizante + beneficiarios) como un solo objeto
         if (!Array.isArray(personas)) {
             personas = [personas];
         }
@@ -211,13 +296,11 @@ jQuery(document).ready(function ($) {
             var tipoAfiliado = (p.tipo_afiliado || '').toUpperCase();
             var esCotizante = (tipoAfiliado === 'COTIZANTE');
 
-            // Etiqueta secundaria para beneficiarios (parentesco)
             var etiquetaParentesco = '';
             if (!esCotizante && p.parentesco) {
                 etiquetaParentesco = ' <small style="color:#6b6f8a;">(' + escapeHtml(p.parentesco) + ')</small>';
             }
 
-            // El cotizante va con checkbox marcado; los beneficiarios también (por si en el futuro quieren seleccionar cuáles)
             var checked = 'checked';
 
             html += '<tr data-tipo="' + escapeHtml(tipoAfiliado) + '">'
@@ -253,21 +336,32 @@ jQuery(document).ready(function ($) {
     }
 
     function cerrarSesion() {
-        $btnSalir.prop('disabled', true).text('Saliendo...');
-        $btnSalirRes.prop('disabled', true).text('Saliendo...');
+        Swal.fire({
+            title: '¿Cerrar sesión?',
+            text: 'Se cerrará tu sesión actual y volverás a la pantalla de inicio.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: SWAL_COLOR,
+            cancelButtonColor: '#9498b3',
+            confirmButtonText: 'Sí, cerrar sesión',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
 
-        $.ajax({
-            url: usuarios_ajax.ajax_url,
-            type: 'POST',
-            dataType: 'json',
-            data: { action: 'salud_cerrar_sesion' },
-            complete: function (xhr) {
-                console.log('logout status:', xhr.status);
+            $btnSalir.prop('disabled', true).text('Saliendo...');
+            $btnSalirRes.prop('disabled', true).text('Saliendo...');
 
-                // Forzar recarga limpia (sin caché)
-                var url = window.location.href.split('#')[0].split('?')[0];
-                window.location.href = url + '?logout=' + Date.now();
-            }
+            $.ajax({
+                url: usuarios_ajax.ajax_url,
+                type: 'POST',
+                dataType: 'json',
+                data: { action: 'salud_cerrar_sesion' },
+                complete: function () {
+                    var url = window.location.href.split('#')[0].split('?')[0];
+                    window.location.href = url + '?logout=' + Date.now();
+                }
+            });
         });
     }
 
@@ -279,9 +373,90 @@ jQuery(document).ready(function ($) {
     });
 
     // ============================================================
+    //  DESCARGAR CERTIFICADO PDF
+    // ============================================================
+    function descargarCertificado(identificacionOverride, tipoOverride) {
+        var identificacion = identificacionOverride || $.trim($inputIdent.val());
+        if (identificacion === '') {
+            identificacion = $('#ac-tabla-body tr').first().find('td').eq(2).text().trim();
+        }
+        if (identificacion === '') {
+            swalAdvertencia('Sin identificación', 'No se pudo identificar el documento a certificar.');
+            return;
+        }
+
+        var tipo = tipoOverride || $('input[name="tipo_certificado"]:checked').val();
+        if (!tipo) {
+            swalAdvertencia('Sin tipo', 'Selecciona un tipo de certificado (INDIVIDUAL o GRUPO FAMILIAR).');
+            return;
+        }
+
+        var generaPara = $('#certificado-genera').val().trim();
+        var $btnOrigen = $btnDescargar;
+        var textoOriginal = $btnOrigen.text();
+        var esBotonPrincipal = $btnOrigen.is(':visible');
+
+        if (esBotonPrincipal) {
+            $btnOrigen.prop('disabled', true).text('Generando...');
+        }
+
+        swalCargando('Generando certificado PDF...');
+
+        ajaxConNonce(
+            'salud_generar_pdf',
+            {
+                identificacion: identificacion,
+                tipo_certificado: tipo,
+                genera_para: generaPara
+            },
+            function (data) {
+                try {
+                    var binario = atob(data.archivo);
+                    var len = binario.length;
+                    var bytes = new Uint8Array(len);
+                    for (var i = 0; i < len; i++) {
+                        bytes[i] = binario.charCodeAt(i);
+                    }
+                    var blob = new Blob([bytes], { type: 'application/pdf' });
+                    var url = URL.createObjectURL(blob);
+
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = data.nombre || 'certificado.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+
+                    swalCerrar();
+                    swalExito('Certificado generado', 'El archivo se está descargando.');
+
+                    if (esBotonPrincipal) {
+                        $btnOrigen.prop('disabled', false).text(textoOriginal);
+                    }
+                } catch (e) {
+                    console.error('Error al procesar el PDF:', e);
+                    swalCerrar();
+                    swalError('Error al procesar', 'No se pudo procesar el PDF descargado.');
+                    if (esBotonPrincipal) {
+                        $btnOrigen.prop('disabled', false).text(textoOriginal);
+                    }
+                }
+            },
+            function (err) {
+                swalCerrar();
+                swalError('No se pudo generar', err.message || 'No se pudo generar el certificado.');
+                if (esBotonPrincipal) {
+                    $btnOrigen.prop('disabled', false).text(textoOriginal);
+                }
+            }
+        );
+    }
+
+    // ============================================================
     //  EVENTOS
     // ============================================================
-    $btnConsultar.on('click', realizarConsulta);
+    $btnConsultar.on('click', function () { realizarConsulta(); });
 
     $inputIdent.on('keypress', function (e) {
         if (e.key === 'Enter') {
@@ -296,7 +471,7 @@ jQuery(document).ready(function ($) {
 
     $btnDescargar.on('click', function (e) {
         e.preventDefault();
-        alert('La generación de certificados se habilitará próximamente.');
+        descargarCertificado();
     });
 
     // ============================================================
@@ -332,25 +507,49 @@ jQuery(document).ready(function ($) {
 
         var html = '<div class="ac-historial-tabla-wrapper">';
         html += '<table class="ac-historial-tabla">';
-        html += '<thead><tr>';
-        html += '<th>FECHA</th>';
+
+        // ✅ Título HISTORIAL (fila de encabezado con colspan)
+        html += '<thead>';
+        html += '<tr class="ac-historial-titulo-fila">';
+        html += '<th colspan="5">HISTORIAL</th>';
+        html += '</tr>';
+        html += '<tr class="ac-historial-columnas">';
+        html += '<th>FECHA DE CONSULTA</th>';
+        html += '<th>TIPO DE AFILIACIÓN</th>';
         html += '<th>IDENTIFICACIÓN</th>';
-        html += '<th>NOMBRE</th>';
-        html += '<th>TIPO</th>';
-        html += '</tr></thead><tbody>';
+        html += '<th>NOMBRE COMPLETO</th>';
+        html += '<th>ACCIONES</th>';
+        html += '</tr>';
+        html += '</thead><tbody>';
 
         $.each(historial, function (i, h) {
             var tipo = (h.tipo_afiliado || '—').toUpperCase();
-            var tipoClass = (tipo === 'BENEFICIARIO')
-                ? 'ac-historial-tipo-benef'
-                : 'ac-historial-tipo-cotiz';
+            var ident = h.identificacion_consultada || '';
+            var identificacionEsc = escapeHtml(ident);
 
             html += '<tr>';
             html += '<td>' + escapeHtml(h.fecha_formateada || '') + '</td>';
-            html += '<td>' + escapeHtml(h.identificacion_consultada || '') + '</td>';
+            html += '<td>' + escapeHtml(tipo) + '</td>';
+            html += '<td>' + identificacionEsc + '</td>';
             html += '<td>' + escapeHtml(h.nombre_consultado || '—') + '</td>';
-            html += '<td><span class="ac-historial-tipo ' + tipoClass + '">' +
-                escapeHtml(tipo) + '</span></td>';
+
+            // Columna de acciones con dos iconos (ojo y descarga)
+            html += '<td class="ac-hist-acciones-cell">';
+            html += '<div class="ac-hist-acciones">';
+
+            html += '<button type="button" class="ac-hist-icon-btn ac-hist-btn-ver" '
+                + 'data-identificacion="' + identificacionEsc + '" '
+                + 'title="Ver los resultados de esta consulta">'
+                + '<i class="fa fa-eye"></i>'
+                + '</button>';
+
+            html += '<button type="button" class="ac-hist-icon-btn ac-hist-btn-pdf" '
+                + 'data-identificacion="' + identificacionEsc + '" '
+                + 'title="Descargar certificado PDF">'
+                + '<i class="fa fa-download"></i>'
+                + '</button>';
+
+            html += '</div></td>';
             html += '</tr>';
         });
 
@@ -380,7 +579,7 @@ jQuery(document).ready(function ($) {
         }
     }
 
-    // Delegado: click en paginación del historial
+    // Paginación del historial
     $(document).on('click', '.ac-hist-page', function (e) {
         e.preventDefault();
         var page = $(this).data('page');
@@ -390,10 +589,112 @@ jQuery(document).ready(function ($) {
         }
     });
 
+    // Botón VER del historial
+    $(document).on('click', '.ac-hist-btn-ver', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        var ident = $(this).data('identificacion');
+        if (!ident) {
+            swalAdvertencia('Sin identificación', 'No hay identificación en este registro.');
+            return;
+        }
+
+        $inputIdent.val(ident);
+        realizarConsulta(ident);
+    });
+
+    // Botón PDF del historial
+    $(document).on('click', '.ac-hist-btn-pdf', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        var ident = $(this).data('identificacion');
+        if (!ident) {
+            swalAdvertencia('Sin identificación', 'No hay identificación en este registro.');
+            return;
+        }
+
+        var $btn = $(this);
+        var textoOriginal = $btn.html();
+
+        // Preguntar tipo de certificado
+        Swal.fire({
+            title: 'Tipo de certificado',
+            text: '¿Qué tipo de certificado deseas generar?',
+            icon: 'question',
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonColor: SWAL_COLOR,
+            denyButtonColor: '#4a50a0',
+            cancelButtonColor: '#9498b3',
+            confirmButtonText: 'INDIVIDUAL',
+            denyButtonText: 'GRUPO FAMILIAR',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+        }).then(function (result) {
+            // Cancelar / cerrar / esc / backdrop → no hacer nada
+            if (result.dismiss === Swal.DismissReason.cancel ||
+                result.dismiss === Swal.DismissReason.backdrop ||
+                result.dismiss === Swal.DismissReason.esc) {
+                return;
+            }
+
+            // Determinar tipo
+            var tipo = result.isConfirmed ? 'INDIVIDUAL' : 'GRUPO FAMILIAR';
+
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Generando...');
+
+            swalCargando('Generando certificado ' + tipo + '...');
+
+            ajaxConNonce(
+                'salud_generar_pdf',
+                {
+                    identificacion: ident,
+                    tipo_certificado: tipo,
+                    genera_para: ''
+                },
+                function (data) {
+                    try {
+                        var binario = atob(data.archivo);
+                        var len = binario.length;
+                        var bytes = new Uint8Array(len);
+                        for (var i = 0; i < len; i++) {
+                            bytes[i] = binario.charCodeAt(i);
+                        }
+                        var blob = new Blob([bytes], { type: 'application/pdf' });
+                        var url = URL.createObjectURL(blob);
+                        var a = document.createElement('a');
+                        a.href = url;
+                        a.download = data.nombre || 'certificado.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+
+                        swalCerrar();
+                        swalExito('Certificado generado', 'El archivo se está descargando.');
+
+                        $btn.prop('disabled', false).html(textoOriginal);
+                    } catch (ex) {
+                        console.error('Error al procesar el PDF:', ex);
+                        swalCerrar();
+                        swalError('Error al procesar', 'No se pudo procesar el PDF descargado.');
+                        $btn.prop('disabled', false).html(textoOriginal);
+                    }
+                },
+                function (err) {
+                    swalCerrar();
+                    swalError('No se pudo generar', err.message || 'No se pudo generar el certificado.');
+                    $btn.prop('disabled', false).html(textoOriginal);
+                }
+            );
+        });
+    });
+
     // ============================================================
     //  ARRANQUE
     // ============================================================
-    // Pedir un nonce fresco al cargar (por si acaso) e iniciar timer.
     obtenerNonceFresco().always(function () {
         iniciarTimerSesion();
         $inputIdent.focus();

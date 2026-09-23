@@ -87,7 +87,7 @@ $nombre_sesion = isset($usuario_salud['nombre']) ? $usuario_salud['nombre'] : ''
         <!-- Sección de certificado -->
         <div class="ac-certificado-wrapper">
             <div class="ac-certificado-col">
-                <h3 class="ac-certificado-titulo">Tipo De Certificado</h3>
+                <h3 class="ac-certificado-titulo">Tipo de Certificado</h3>
                 <p class="ac-certificado-subtitulo">Tipo de certificado que desea generar</p>
                 <div class="ac-certificado-opciones">
                     <label class="ac-radio-pill">
@@ -104,7 +104,7 @@ $nombre_sesion = isset($usuario_salud['nombre']) ? $usuario_salud['nombre'] : ''
             </div>
 
             <div class="ac-certificado-col">
-                <h3 class="ac-certificado-titulo">El Certificado Se Genera Para:</h3>
+                <h3 class="ac-certificado-titulo">El Certificado se Genera Para:</h3>
                 <p class="ac-certificado-subtitulo">[Opcional] Indique la razón por la que va a generar el certificado</p>
                 <div class="ac-certificado-genera">
                     <input type="text" id="certificado-genera" class="ac-input ac-input-genera" placeholder="A quien va dirigido el certificado">
@@ -115,8 +115,8 @@ $nombre_sesion = isset($usuario_salud['nombre']) ? $usuario_salud['nombre'] : ''
 
         <!-- Botones inferiores -->
         <div class="ac-botones-inferiores">
-            <button type="button" id="btn-salir-resultados" class="ac-btn ac-btn-outline">SALIR</button>
-            <button type="button" id="btn-nueva-consulta" class="ac-btn ac-btn-primary">REALIZAR UNA NUEVA CONSULTA</button>
+            <button type="button" id="btn-salir-resultados" class="ac-btn ac-btn-outline" style="margin: 10px;">SALIR</button>
+            <button type="button" id="btn-nueva-consulta" class="ac-btn ac-btn-primary" style="margin: 10px;">REALIZAR UNA NUEVA CONSULTA</button>
         </div>
     </div>
 

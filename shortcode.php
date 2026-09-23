@@ -34,6 +34,23 @@ function unisalud_consulta_enqueue_scripts()
     $base_url = plugin_dir_url(__FILE__);
     $sesion   = UsuariosSaludAuth::validarSesion();
 
+    // ============================================================
+    // SweetAlert2 — común a las dos vistas
+    // ============================================================
+    wp_enqueue_style(
+        'sweetalert2-css',
+        'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css',
+        [],
+        '11.14.5'
+    );
+    wp_enqueue_script(
+        'sweetalert2-js',
+        'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js',
+        [],
+        '11.14.5',
+        true
+    );
+
     if ($sesion['valid']) {
         wp_enqueue_style(
             'usuarios-salud-css',
@@ -44,14 +61,12 @@ function unisalud_consulta_enqueue_scripts()
         wp_enqueue_script(
             'usuarios-salud-js',
             $base_url . 'public/js/script-usuarios.js',
-            ['jquery'],
+            ['jquery', 'sweetalert2-js'],   // ← dependencia clave
             $version,
             true
         );
 
-        // ------------------------------------------------------------
-        // Calcular el tiempo real restante de la sesión
-        // ------------------------------------------------------------
+        // Tiempo restante de la sesión
         $key      = UsuariosSaludAuth::SESSION_KEY;
         $duracion = 2 * 60 * 60;
         $creada   = isset($_SESSION[$key]['created_at'])
@@ -76,7 +91,7 @@ function unisalud_consulta_enqueue_scripts()
         wp_enqueue_script(
             'usuarios-salud-otp-js',
             $base_url . 'public/js/script-otp.js',
-            ['jquery'],
+            ['jquery', 'sweetalert2-js'],   // ← dependencia clave
             $version,
             true
         );
@@ -105,7 +120,7 @@ add_action('wp_enqueue_scripts', function () {
 }, 0);
 
 /**
- * Shortcode principal: decide qué plantilla mostrar
+ * Shortcode principal
  */
 function unisalud_consulta_shortcode()
 {
@@ -149,7 +164,7 @@ add_action('init', function () {
     add_action('wp_ajax_nopriv_salud_cerrar_sesion',  'ajax_salud_cerrar_sesion');
     add_action('wp_ajax_salud_cerrar_sesion',         'ajax_salud_cerrar_sesion');
 
-    // ==== Nonce fresco (evita caché de HTML) ====
+    // ==== Nonce fresco ====
     add_action('wp_ajax_nopriv_salud_fresh_nonce', 'ajax_salud_fresh_nonce');
     add_action('wp_ajax_salud_fresh_nonce',        'ajax_salud_fresh_nonce');
 
@@ -157,19 +172,22 @@ add_action('init', function () {
     add_action('wp_ajax_nopriv_salud_debug_estado', 'ajax_salud_debug_estado');
     add_action('wp_ajax_salud_debug_estado',        'ajax_salud_debug_estado');
 
-    // ==== Session status (sync timer) ====
+    // ==== Session status ====
     add_action('wp_ajax_nopriv_salud_session_status', 'ajax_salud_session_status');
     add_action('wp_ajax_salud_session_status',        'ajax_salud_session_status');
 
     // ==== Personas ====
-    add_action('wp_ajax_nopriv_get_unisalud_consulta',    'ajax_get_unisalud_consulta');
-    add_action('wp_ajax_get_unisalud_consulta',           'ajax_get_unisalud_consulta');
+    add_action('wp_ajax_nopriv_get_unisalud_consulta',     'ajax_get_unisalud_consulta');
+    add_action('wp_ajax_get_unisalud_consulta',            'ajax_get_unisalud_consulta');
     add_action('wp_ajax_nopriv_get_persona_detalle_salud', 'ajax_get_persona_detalle_salud');
-    add_action('wp_ajax_get_persona_detalle_salud',       'ajax_get_persona_detalle_salud');
+    add_action('wp_ajax_get_persona_detalle_salud',        'ajax_get_persona_detalle_salud');
 
     add_action('wp_ajax_nopriv_salud_consultar_por_identificacion', 'ajax_salud_consultar_por_identificacion');
     add_action('wp_ajax_salud_consultar_por_identificacion',        'ajax_salud_consultar_por_identificacion');
 
     add_action('wp_ajax_nopriv_salud_get_historial', 'ajax_salud_get_historial');
     add_action('wp_ajax_salud_get_historial',        'ajax_salud_get_historial');
+
+    add_action('wp_ajax_nopriv_salud_generar_pdf', 'ajax_salud_generar_pdf');
+    add_action('wp_ajax_salud_generar_pdf',        'ajax_salud_generar_pdf');
 }, 5);

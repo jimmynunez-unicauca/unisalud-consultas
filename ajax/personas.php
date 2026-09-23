@@ -5,6 +5,7 @@ if (!defined('ABSPATH')) {
 
 require_once plugin_dir_path(__DIR__) . 'includes/Auth.php';
 require_once plugin_dir_path(__DIR__) . 'includes/Historial.php';
+require_once plugin_dir_path(__DIR__) . 'includes/PDF.php';
 
 /**
  * Lista de personas filtradas. Requiere sesión activa.
@@ -172,7 +173,8 @@ function ajax_salud_get_historial()
     $usuario = UsuariosSaludAuth::requerirSesionAjax();
 
     $pagina     = isset($_POST['pagina']) ? max(1, intval($_POST['pagina'])) : 1;
-    $porPagina  = 10;
+    /* $porPagina  = 10; */
+    $porPagina  = 5;
     $offset     = ($pagina - 1) * $porPagina;
 
     $historial = UsuariosSaludHistorial::obtenerPorUsuario($usuario['id'], $porPagina, $offset);
@@ -196,5 +198,107 @@ function ajax_salud_get_historial()
         'total_paginas' => ($total > 0) ? (int)ceil($total / $porPagina) : 1,
     ]);
 }
+
+/**
+ * Genera y descarga el PDF del certificado.
+ */
+function ajax_salud_generar_pdf()
+{
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'usuarios_salud_nonce')) {
+        wp_send_json_error(['message' => 'Error de seguridad', 'code' => 'BAD_NONCE'], 403);
+        return;
+    }
+
+    $usuario = UsuariosSaludAuth::requerirSesionAjax();
+
+    $identificacion  = isset($_POST['identificacion'])   ? sanitize_text_field(wp_unslash($_POST['identificacion'])) : '';
+    $tipoCertificado = isset($_POST['tipo_certificado']) ? sanitize_text_field(wp_unslash($_POST['tipo_certificado'])) : 'INDIVIDUAL';
+    $generaPara      = isset($_POST['genera_para'])      ? sanitize_text_field(wp_unslash($_POST['genera_para'])) : '';
+
+    if ($identificacion === '') {
+        wp_send_json_error(['message' => 'Falta el número de identificación']);
+        return;
+    }
+
+    // Cargar consultas
+    $consultas_path = plugin_dir_path(__DIR__) . 'consultas.php';
+    if (!file_exists($consultas_path)) {
+        wp_send_json_error(['message' => 'Archivo consultas.php no encontrado']);
+        return;
+    }
+    require_once $consultas_path;
+
+    if (!class_exists('UsuariosSaludConsultas')) {
+        wp_send_json_error(['message' => 'Clase UsuariosSaludConsultas no encontrada']);
+        return;
+    }
+
+    // Consultar persona + beneficiarios
+    $obj   = new UsuariosSaludConsultas();
+    $datos = $obj->getPersonaPorIdentificacion($identificacion);
+
+    if (empty($datos)) {
+        wp_send_json_error(['message' => 'No se encontró el afiliado']);
+        return;
+    }
+
+    // Separar cotizante y beneficiarios
+    $cotizante     = null;
+    $beneficiarios = [];
+
+    foreach ($datos as $d) {
+        $tipo = strtoupper($d['tipo_afiliado'] ?? '');
+        if ($tipo === 'COTIZANTE' && $cotizante === null) {
+            $cotizante = $d;
+        } elseif ($tipo === 'BENEFICIARIO') {
+            $beneficiarios[] = $d;
+        }
+    }
+
+    // Si no hay cotizante, la primera fila es la persona consultada
+    if ($cotizante === null) {
+        $cotizante = $datos[0];
+    }
+
+    // Determinar lista de beneficiarios a incluir
+    $beneficiariosIncluidos = [];
+    if (strtoupper($tipoCertificado) === 'GRUPO FAMILIAR') {
+        $beneficiariosIncluidos = $beneficiarios;
+    }
+
+    // Generar PDF
+    $pdfBinario = UsuariosSaludPDF::generarCertificado(
+        $cotizante,
+        $beneficiariosIncluidos,
+        strtoupper($tipoCertificado),
+        $generaPara
+    );
+
+    if ($pdfBinario === false) {
+        wp_send_json_error(['message' => 'Error al generar el PDF']);
+        return;
+    }
+
+    // Guardar en historial
+    if (!empty($usuario['id'])) {
+        UsuariosSaludHistorial::guardar(
+            (int)$usuario['id'],
+            (string)($usuario['email'] ?? ''),
+            $identificacion,
+            $cotizante['nombre_completo'] ?? '',
+            'CERTIFICADO_' . strtoupper($tipoCertificado),
+            0
+        );
+    }
+
+    // Devolver el PDF como base64 (más seguro que binario directo en JSON)
+    wp_send_json_success([
+        'archivo'   => base64_encode($pdfBinario),
+        'nombre'    => 'certificado_' . $identificacion . '.pdf',
+        'mime'      => 'application/pdf',
+    ]);
+}
+add_action('wp_ajax_nopriv_salud_generar_pdf', 'ajax_salud_generar_pdf');
+add_action('wp_ajax_salud_generar_pdf',        'ajax_salud_generar_pdf');
 
 // ⚠️ NO añadir add_action aquí. Se registran en shortcode.php
