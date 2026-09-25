@@ -7,12 +7,17 @@ require_once __DIR__ . '/Database.php';
 
 class UsuariosSaludAuth
 {
-    const SESSION_KEY       = 'unisalud_consulta_auth';
-    const DURACION_SEGUNDOS = 7200; // 2 horas
+    // ============================================================
+    //  CONFIGURACIÓN DE TIEMPOS (AJUSTAR AQUÍ)
+    // ============================================================
+    const SESSION_KEY           = 'unisalud_consulta_auth';
+    const DURACION_SEGUNDOS     = 7200;   // 2 horas  → sesión absoluta (NO cambiar)
+    const INACTIVIDAD_SEGUNDOS  = 900;    // 15 min   → cierre por inactividad
+    const AVISO_SEGUNDOS        = 60;     // 60 seg   → aviso previo antes de cerrar
 
-    /**
-     * Asegura que la sesión PHP esté iniciada
-     */
+    // ============================================================
+    //  INICIAR SESIÓN
+    // ============================================================
     public static function iniciarSesionSiNoExiste()
     {
         if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
@@ -20,9 +25,9 @@ class UsuariosSaludAuth
         }
     }
 
-    /**
-     * Valida sesión activa y usuario en BD
-     */
+    // ============================================================
+    //  VALIDAR SESIÓN (absoluta + inactividad)
+    // ============================================================
     public static function validarSesion()
     {
         self::iniciarSesionSiNoExiste();
@@ -32,12 +37,20 @@ class UsuariosSaludAuth
         }
 
         $sesion = $_SESSION[self::SESSION_KEY];
-        $creada = isset($sesion['created_at']) ? (int)$sesion['created_at'] : 0;
+        $creada = isset($sesion['created_at'])    ? (int)$sesion['created_at']    : 0;
+        $ultima = isset($sesion['last_activity']) ? (int)$sesion['last_activity'] : 0;
 
+        // ── 1) Chequeo absoluto (2 horas) ──
         if ($creada === 0 || (time() - $creada) > self::DURACION_SEGUNDOS) {
-            return ['valid' => false, 'message' => 'Sesión expirada', 'usuario' => null];
+            return ['valid' => false, 'message' => 'Sesión expirada (tiempo máximo)', 'usuario' => null];
         }
 
+        // ── 2) Chequeo por inactividad ──
+        if ($ultima === 0 || (time() - $ultima) > self::INACTIVIDAD_SEGUNDOS) {
+            return ['valid' => false, 'message' => 'Sesión expirada (inactividad)', 'usuario' => null];
+        }
+
+        // ── 3) Verificar usuario en BD ──
         try {
             $db = UsuariosSaludDatabase::mysql();
             if (!$db) {
@@ -68,9 +81,9 @@ class UsuariosSaludAuth
         }
     }
 
-    /**
-     * Para endpoints AJAX: corta con 401 si no hay sesión válida
-     */
+    // ============================================================
+    //  REQUERIR SESIÓN PARA AJAX
+    // ============================================================
     public static function requerirSesionAjax()
     {
         $r = self::validarSesion();
@@ -83,9 +96,9 @@ class UsuariosSaludAuth
         return $r['usuario'];
     }
 
-    /**
-     * Crea la sesión tras verificar OTP
-     */
+    // ============================================================
+    //  CREAR SESIÓN (tras verificar OTP)
+    // ============================================================
     public static function crearSesion($usuario)
     {
         self::iniciarSesionSiNoExiste();
@@ -95,7 +108,8 @@ class UsuariosSaludAuth
             'nombre'         => $usuario['nombre']         ?? '',
             'email'          => $usuario['email']          ?? '',
             'identificacion' => $usuario['identificacion'] ?? '',
-            'created_at'     => time(),   // ← ⚠️ ESTA LÍNEA ES CRÍTICA
+            'created_at'     => time(),
+            'last_activity'  => time(),   // ← nuevo
         ];
 
         if (function_exists('session_regenerate_id')) {
@@ -103,9 +117,62 @@ class UsuariosSaludAuth
         }
     }
 
-    /**
-     * Cierra sesión y limpia OTP en BD (auditado)
-     */
+    // ============================================================
+    //  REGISTRAR ACTIVIDAD
+    //  Solo actualiza last_activity si la sesión sigue válida.
+    //  Se llama desde:
+    //    - salud_activity_ping (JS con actividad real en el navegador)
+    //    - acciones de negocio (consulta, PDF, historial)
+    // ============================================================
+    public static function registrarActividad()
+    {
+        self::iniciarSesionSiNoExiste();
+
+        if (empty($_SESSION[self::SESSION_KEY]['id'])) {
+            return false;
+        }
+
+        // Verificar que la sesión no haya expirado antes de renovar
+        $sesion = $_SESSION[self::SESSION_KEY];
+        $creada = isset($sesion['created_at'])    ? (int)$sesion['created_at']    : 0;
+        $ultima = isset($sesion['last_activity']) ? (int)$sesion['last_activity'] : 0;
+
+        // Si ya expiró por absoluto o por inactividad, NO renovar
+        if ($creada === 0 || (time() - $creada) > self::DURACION_SEGUNDOS) {
+            return false;
+        }
+        if ($ultima === 0 || (time() - $ultima) > self::INACTIVIDAD_SEGUNDOS) {
+            return false;
+        }
+
+        $_SESSION[self::SESSION_KEY]['last_activity'] = time();
+        return true;
+    }
+
+    // ============================================================
+    //  TIEMPOS RESTANTES (para el frontend)
+    // ============================================================
+    public static function tiemposRestantes()
+    {
+        self::iniciarSesionSiNoExiste();
+
+        if (empty($_SESSION[self::SESSION_KEY]['id'])) {
+            return ['absoluto' => 0, 'inactividad' => 0];
+        }
+
+        $sesion = $_SESSION[self::SESSION_KEY];
+        $creada = isset($sesion['created_at'])    ? (int)$sesion['created_at']    : time();
+        $ultima = isset($sesion['last_activity']) ? (int)$sesion['last_activity'] : time();
+
+        return [
+            'absoluto'    => max(0, self::DURACION_SEGUNDOS    - (time() - $creada)),
+            'inactividad' => max(0, self::INACTIVIDAD_SEGUNDOS - (time() - $ultima)),
+        ];
+    }
+
+    // ============================================================
+    //  CERRAR SESIÓN
+    // ============================================================
     public static function cerrarSesion()
     {
         self::iniciarSesionSiNoExiste();
@@ -113,15 +180,14 @@ class UsuariosSaludAuth
         $id    = $_SESSION[self::SESSION_KEY]['id']    ?? null;
         $email = $_SESSION[self::SESSION_KEY]['email'] ?? '';
 
-        // 1) Limpiar OTP en MySQL y auditar
         if ($id) {
             try {
                 $db = UsuariosSaludDatabase::mysql();
                 if ($db) {
                     $stmt = $db->prepare(
                         "UPDATE usuarios_otp
-                     SET otp_code = NULL, otp_expires_at = NULL
-                     WHERE id = ?"
+                         SET otp_code = NULL, otp_expires_at = NULL
+                         WHERE id = ?"
                     );
                     $idInt = (int)$id;
                     $stmt->bind_param('i', $idInt);
@@ -145,10 +211,8 @@ class UsuariosSaludAuth
             }
         }
 
-        // 2) Vaciar sesión en memoria
         $_SESSION = [];
 
-        // 3) Borrar cookies de sesión
         if (ini_get("session.use_cookies")) {
             $params = session_get_cookie_params();
             setcookie(
@@ -163,7 +227,6 @@ class UsuariosSaludAuth
             setcookie(session_name(), '', time() - 42000, '/');
         }
 
-        // 4) Destruir la sesión en el servidor
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_destroy();
         }

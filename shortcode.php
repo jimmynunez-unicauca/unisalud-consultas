@@ -61,25 +61,34 @@ function unisalud_consulta_enqueue_scripts()
         wp_enqueue_script(
             'usuarios-salud-js',
             $base_url . 'public/js/script-usuarios.js',
-            ['jquery', 'sweetalert2-js'],   // ← dependencia clave
+            ['jquery', 'sweetalert2-js'],
             $version,
             true
         );
 
-        // Tiempo restante de la sesión
+        // ------------------------------------------------------------
+        // Calcular tiempos de sesión
+        // ------------------------------------------------------------
         $key      = UsuariosSaludAuth::SESSION_KEY;
-        $duracion = 2 * 60 * 60;
+        $duracion = UsuariosSaludAuth::DURACION_SEGUNDOS;
+
         $creada   = isset($_SESSION[$key]['created_at'])
             ? (int)$_SESSION[$key]['created_at']
             : time();
+
         $restante = max(0, $duracion - (time() - $creada));
 
+        // ------------------------------------------------------------
+        // UNA SOLA llamada a wp_localize_script con TODAS las variables
+        // ------------------------------------------------------------
         wp_localize_script('usuarios-salud-js', 'usuarios_ajax', [
-            'ajax_url'        => admin_url('admin-ajax.php'),
-            'nonce'           => wp_create_nonce('unisalud_consulta_nonce'),
-            'plugin_url'      => $base_url,
-            'sesion_restante' => $restante,
-            'sesion_total'    => $duracion,
+            'ajax_url'          => admin_url('admin-ajax.php'),
+            'nonce'             => wp_create_nonce('unisalud_consulta_nonce'),
+            'plugin_url'        => $base_url,
+            'sesion_restante'   => $restante,
+            'sesion_total'      => $duracion,
+            'inactividad_total' => UsuariosSaludAuth::INACTIVIDAD_SEGUNDOS,
+            'aviso_segundos'    => UsuariosSaludAuth::AVISO_SEGUNDOS,
         ]);
     } else {
         wp_enqueue_style(
@@ -91,7 +100,7 @@ function unisalud_consulta_enqueue_scripts()
         wp_enqueue_script(
             'usuarios-salud-otp-js',
             $base_url . 'public/js/script-otp.js',
-            ['jquery', 'sweetalert2-js'],   // ← dependencia clave
+            ['jquery', 'sweetalert2-js'],
             $version,
             true
         );
@@ -175,6 +184,10 @@ add_action('init', function () {
     // ==== Session status ====
     add_action('wp_ajax_nopriv_salud_session_status', 'ajax_salud_session_status');
     add_action('wp_ajax_salud_session_status',        'ajax_salud_session_status');
+
+    // ==== Session activity ping (NUEVO) ====
+    add_action('wp_ajax_nopriv_salud_activity_ping', 'ajax_salud_activity_ping');
+    add_action('wp_ajax_salud_activity_ping',        'ajax_salud_activity_ping');
 
     // ==== Personas ====
     add_action('wp_ajax_nopriv_get_unisalud_consulta',     'ajax_get_unisalud_consulta');

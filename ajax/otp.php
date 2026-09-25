@@ -221,22 +221,50 @@ function ajax_salud_session_status()
     $sesion = UsuariosSaludAuth::validarSesion();
 
     if (!$sesion['valid']) {
-        wp_send_json_error(['code' => 'UNAUTHORIZED'], 401);
+        wp_send_json_error(['code' => 'UNAUTHORIZED', 'message' => $sesion['message']], 401);
         return;
     }
 
-    $key      = UsuariosSaludAuth::SESSION_KEY;
-    $duracion = 2 * 60 * 60;
-
-    $creada   = isset($_SESSION[$key]['created_at'])
-        ? (int)$_SESSION[$key]['created_at']
-        : time();
-    $restante = max(0, $duracion - (time() - $creada));
+    $t = UsuariosSaludAuth::tiemposRestantes();
 
     wp_send_json_success([
-        'restante' => $restante,
-        'total'    => $duracion,
+        'absoluto_restante'     => $t['absoluto'],
+        'inactividad_restante'  => $t['inactividad'],
+        'inactividad_total'     => UsuariosSaludAuth::INACTIVIDAD_SEGUNDOS,
+        'aviso_segundos'        => UsuariosSaludAuth::AVISO_SEGUNDOS,
+        'absoluto_total'        => UsuariosSaludAuth::DURACION_SEGUNDOS,
     ]);
 }
 add_action('wp_ajax_nopriv_salud_session_status', 'ajax_salud_session_status');
 add_action('wp_ajax_salud_session_status',        'ajax_salud_session_status');
+
+/**
+ * Recibe señal de actividad del navegador y renueva last_activity.
+ * Solo renueva si la sesión sigue siendo válida.
+ */
+function ajax_salud_activity_ping()
+{
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'usuarios_salud_nonce')) {
+        wp_send_json_error(['message' => 'Error de seguridad', 'code' => 'BAD_NONCE'], 403);
+        return;
+    }
+
+    $valida = UsuariosSaludAuth::validarSesion();
+    if (!$valida['valid']) {
+        wp_send_json_error(['message' => $valida['message'], 'code' => 'UNAUTHORIZED'], 401);
+        return;
+    }
+
+    $ok = UsuariosSaludAuth::registrarActividad();
+    if (!$ok) {
+        wp_send_json_error(['message' => 'No se pudo renovar la sesión', 'code' => 'UNAUTHORIZED'], 401);
+        return;
+    }
+
+    $t = UsuariosSaludAuth::tiemposRestantes();
+
+    wp_send_json_success([
+        'absoluto_restante'    => $t['absoluto'],
+        'inactividad_restante' => $t['inactividad'],
+    ]);
+}

@@ -101,6 +101,7 @@ function ajax_salud_consultar_por_identificacion()
 
     // 2) Requerir sesión y obtener usuario
     $usuario = UsuariosSaludAuth::requerirSesionAjax();
+    UsuariosSaludAuth::registrarActividad();
     error_log('[CONSULTA] usuario=' . print_r($usuario, true));
 
     // 3) Validar identificación
@@ -171,6 +172,7 @@ function ajax_salud_get_historial()
     }
 
     $usuario = UsuariosSaludAuth::requerirSesionAjax();
+    UsuariosSaludAuth::registrarActividad();
 
     $pagina     = isset($_POST['pagina']) ? max(1, intval($_POST['pagina'])) : 1;
     /* $porPagina  = 10; */
@@ -210,6 +212,7 @@ function ajax_salud_generar_pdf()
     }
 
     $usuario = UsuariosSaludAuth::requerirSesionAjax();
+    UsuariosSaludAuth::registrarActividad();
 
     $identificacion  = isset($_POST['identificacion'])   ? sanitize_text_field(wp_unslash($_POST['identificacion'])) : '';
     $tipoCertificado = isset($_POST['tipo_certificado']) ? sanitize_text_field(wp_unslash($_POST['tipo_certificado'])) : 'INDIVIDUAL';
